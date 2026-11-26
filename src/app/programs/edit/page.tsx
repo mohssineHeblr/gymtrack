@@ -2,13 +2,14 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, Copy, Play, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, Link2, Play, Plus, Trash2, Unlink, X } from "lucide-react";
 import { Badge, Button, Card, EmptyState, Field, IconButton, Input, PageHeader, SectionTitle, Spinner, TextArea } from "@/components/ui";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { useExerciseMap, useGym } from "@/lib/store";
 import { programStats } from "@/lib/program-utils";
 import { WEEKDAYS_LETTER, cn, relativeDay, uuid } from "@/lib/utils";
-import type { ProgramDay, WorkoutProgram } from "@/lib/types";
+import { TECHNIQUES, type ProgramDay, type ProgramExercise, type Technique, type WorkoutProgram } from "@/lib/types";
+import { TECHNIQUE_INFO, TEMPO_PRESETS, groupKind, groupLetters, normalizeGroups } from "@/lib/techniques";
 
 export default function EditProgramPage() {
   return (
@@ -73,6 +74,26 @@ function EditProgram() {
 
   const updatePe = (dayId: string, peId: string, patch: Partial<ProgramDay["exercises"][number]>) =>
     updateDay(dayId, (d) => ({ ...d, exercises: d.exercises.map((x) => (x.id === peId ? { ...x, ...patch } : x)) }));
+
+  /** Link exercise ei with ei+1 into a superset (or unlink them). */
+  const toggleLink = (dayId: string, ei: number) =>
+    updateDay(dayId, (d) => {
+      const list = [...d.exercises];
+      const a = list[ei];
+      const b = list[ei + 1];
+      if (!a || !b) return d;
+      if (a.groupId && a.groupId === b.groupId) {
+        // split the group at this point: everything after ei gets a new group (or none)
+        const gid = a.groupId;
+        const fresh = uuid();
+        for (let k = ei + 1; k < list.length && list[k].groupId === gid; k++) list[k] = { ...list[k], groupId: fresh };
+      } else {
+        const gid = a.groupId ?? b.groupId ?? uuid();
+        const old = b.groupId;
+        for (let k = 0; k < list.length; k++) if (k === ei || k === ei + 1 || (old && list[k].groupId === old)) list[k] = { ...list[k], groupId: gid };
+      }
+      return { ...d, exercises: normalizeGroups(list) };
+    });
 
   const flush = () => {
     if (dirty) {
@@ -196,17 +217,28 @@ function EditProgram() {
               </div>
 
               <div className="border-t border-line">
-                {day.exercises.map((pe, ei) => (
-                  <div key={pe.id} className="border-b border-line px-4 py-3">
+                {day.exercises.map((pe, ei) => {
+                  const letters = groupLetters(day.exercises);
+                  const size = pe.groupId ? day.exercises.filter((x) => x.groupId === pe.groupId).length : 0;
+                  const next = day.exercises[ei + 1];
+                  const linked = !!pe.groupId && next?.groupId === pe.groupId;
+                  return (
+                  <div key={pe.id}>
+                  <div className={cn("border-b border-line px-4 py-3", pe.groupId && "border-l-4 border-l-info bg-info/5")}>
+                    {pe.groupId && (ei === 0 || day.exercises[ei - 1].groupId !== pe.groupId) && (
+                      <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-info">
+                        {groupKind(size)} {letters.get(pe.groupId)}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <div className="min-w-0 flex-1 truncate text-[15px] font-semibold">{exMap.get(pe.exerciseId)?.name ?? pe.exerciseId}</div>
-                      <IconButton label="Move up" className="h-8 w-8 bg-transparent text-subtle" disabled={ei === 0} onClick={() => updateDay(day.id, (d) => ({ ...d, exercises: swap(d.exercises, ei, ei - 1) }))}>
+                      <IconButton label="Move up" className="h-8 w-8 bg-transparent text-subtle" disabled={ei === 0} onClick={() => updateDay(day.id, (d) => ({ ...d, exercises: normalizeGroups(swap(d.exercises, ei, ei - 1)) }))}>
                         <ArrowUp className="h-4 w-4" />
                       </IconButton>
-                      <IconButton label="Move down" className="h-8 w-8 bg-transparent text-subtle" disabled={ei === day.exercises.length - 1} onClick={() => updateDay(day.id, (d) => ({ ...d, exercises: swap(d.exercises, ei, ei + 1) }))}>
+                      <IconButton label="Move down" className="h-8 w-8 bg-transparent text-subtle" disabled={ei === day.exercises.length - 1} onClick={() => updateDay(day.id, (d) => ({ ...d, exercises: normalizeGroups(swap(d.exercises, ei, ei + 1)) }))}>
                         <ArrowDown className="h-4 w-4" />
                       </IconButton>
-                    <IconButton label="Remove exercise" className="h-8 w-8 text-danger" onClick={() => updateDay(day.id, (d) => ({ ...d, exercises: d.exercises.filter((x) => x.id !== pe.id) }))}>
+                    <IconButton label="Remove exercise" className="h-8 w-8 text-danger" onClick={() => updateDay(day.id, (d) => ({ ...d, exercises: normalizeGroups(d.exercises.filter((x) => x.id !== pe.id)) }))}>
                       <X className="h-4 w-4" />
                     </IconButton>
                     </div>
@@ -231,8 +263,50 @@ function EditProgram() {
                         </select>
                       </MiniField>
                     </div>
+                    <div className={cn("mt-2 grid gap-2", pe.technique === "tempo" ? "grid-cols-2" : "grid-cols-1")}>
+                      <MiniField label="Technique">
+                        <select
+                          aria-label="Technique"
+                          value={pe.technique ?? "standard"}
+                          onChange={(e) => {
+                            const t = e.target.value as Technique;
+                            updatePe(day.id, pe.id, { technique: t, tempo: t === "tempo" ? (pe.tempo ?? "3-1-1-0") : undefined });
+                          }}
+                          className={miniInput}
+                        >
+                          {TECHNIQUES.map((t) => (
+                            <option key={t} value={t}>{TECHNIQUE_INFO[t].short}</option>
+                          ))}
+                        </select>
+                      </MiniField>
+                      {pe.technique === "tempo" && (
+                        <MiniField label="Tempo">
+                          <select aria-label="Tempo" value={pe.tempo ?? "3-1-1-0"} onChange={(e) => updatePe(day.id, pe.id, { tempo: e.target.value })} className={miniInput}>
+                            {TEMPO_PRESETS.map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        </MiniField>
+                      )}
+                    </div>
                   </div>
-                ))}
+                  {next && (
+                    <button
+                      onClick={() => toggleLink(day.id, ei)}
+                      className={cn(
+                        "tap flex w-full items-center justify-center gap-1.5 border-b border-line py-1.5 text-[11px] font-semibold",
+                        linked ? "bg-info/10 text-info" : "text-subtle",
+                      )}
+                      aria-pressed={linked}
+                      aria-label={linked ? "Unlink superset" : "Link as superset"}
+                    >
+                      {linked ? <Unlink className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
+                      {linked ? "Linked — tap to unlink" : "Link with next as superset"}
+                    </button>
+                  )}
+                  </div>
+                  );
+                })}
               </div>
               <div className="grid grid-cols-2 gap-2 p-3">
                 <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setPickerDay(day.id)}>
@@ -280,7 +354,8 @@ function EditProgram() {
               ...d.exercises,
               ...ids.map((exerciseId) => {
                 const ex = exMap.get(exerciseId);
-                return { id: uuid(), exerciseId, sets: ex?.recommendedSets ?? 3, reps: ex?.recommendedReps ?? "8-12", restSeconds: 90 };
+                const pe: ProgramExercise = { id: uuid(), exerciseId, sets: ex?.recommendedSets ?? 3, reps: ex?.recommendedReps ?? "8-12", restSeconds: 90 };
+                return pe;
               }),
             ],
           }));

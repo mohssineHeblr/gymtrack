@@ -1,4 +1,5 @@
-import type { Equipment, Exercise, MuscleGroup } from "@/lib/types";
+import type { Equipment, Exercise, ExerciseType, MuscleGroup } from "@/lib/types";
+import { EXERCISE_MUSCLES } from "./muscles";
 
 function ex(
   id: string,
@@ -13,7 +14,7 @@ function ex(
   return { id, name, muscleGroup, equipment, description, instructions, recommendedSets, recommendedReps };
 }
 
-export const DEFAULT_EXERCISES: Exercise[] = [
+const BASE_EXERCISES: Exercise[] = [
   // CHEST
   ex("bench-press", "Bench Press", "Chest", "Barbell",
     "The king of upper-body pressing. Builds chest, front delts and triceps.",
@@ -145,37 +146,37 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     ["Hinge forward with your upper arm parallel to the floor.", "Extend the dumbbell back until your arm is straight.", "Squeeze the triceps.", "Return slowly."], 3, "12-15"),
 
   // LEGS
-  ex("back-squat", "Back Squat", "Legs", "Barbell",
+  ex("back-squat", "Back Squat", "Quadriceps", "Barbell",
     "The foundational lower-body lift for quads, glutes and core.",
     ["Set the bar on your upper back and unrack it.", "Stand with feet shoulder-width, toes slightly out.", "Sit down and back until hips are below knees.", "Drive up through mid-foot to standing."], 4, "5-8"),
-  ex("front-squat", "Front Squat", "Legs", "Barbell",
+  ex("front-squat", "Front Squat", "Quadriceps", "Barbell",
     "Quad-dominant squat with the bar in the front rack.",
     ["Rest the bar on your front delts, elbows high.", "Squat straight down keeping your torso upright.", "Reach depth below parallel.", "Drive up keeping elbows high."], 3, "5-8"),
-  ex("leg-press", "Leg Press", "Legs", "Machine",
+  ex("leg-press", "Leg Press", "Quadriceps", "Machine",
     "Heavy quad and glute work with back support.",
     ["Sit with feet shoulder-width on the platform.", "Release the safeties and lower the sled to ~90°.", "Press through your heels to extend.", "Don't lock the knees hard at the top."], 3, "10-12"),
-  ex("romanian-deadlift", "Romanian Deadlift", "Legs", "Barbell",
+  ex("romanian-deadlift", "Romanian Deadlift", "Hamstrings", "Barbell",
     "Hip hinge for hamstrings and glutes.",
     ["Hold the bar at hip height with a flat back.", "Push your hips back, sliding the bar down your thighs.", "Stop when you feel a strong hamstring stretch.", "Drive the hips forward to stand."], 3, "8-10"),
-  ex("bulgarian-split-squat", "Bulgarian Split Squat", "Legs", "Dumbbell",
+  ex("bulgarian-split-squat", "Bulgarian Split Squat", "Quadriceps", "Dumbbell",
     "Single-leg squat for quads and glutes.",
     ["Stand in front of a bench, rear foot elevated behind you.", "Hold dumbbells at your sides.", "Lower until the back knee nearly touches the floor.", "Drive up through the front foot."], 3, "8-12"),
-  ex("walking-lunge", "Walking Lunge", "Legs", "Dumbbell",
+  ex("walking-lunge", "Walking Lunge", "Quadriceps", "Dumbbell",
     "Dynamic lunge for legs and balance.",
     ["Hold dumbbells at your sides.", "Step forward into a lunge, both knees at ~90°.", "Push off and step through with the other leg.", "Keep your torso tall."], 3, "10-12"),
-  ex("leg-extension", "Leg Extension", "Legs", "Machine",
+  ex("leg-extension", "Leg Extension", "Quadriceps", "Machine",
     "Quad isolation.",
     ["Sit with the pad on your lower shins.", "Extend your legs until straight.", "Squeeze the quads at the top.", "Lower slowly."], 3, "12-15"),
-  ex("leg-curl", "Lying Leg Curl", "Legs", "Machine",
+  ex("leg-curl", "Lying Leg Curl", "Hamstrings", "Machine",
     "Hamstring isolation.",
     ["Lie face down with the pad above your heels.", "Curl your heels towards your glutes.", "Squeeze at the top.", "Lower under control."], 3, "10-15"),
-  ex("calf-raise", "Standing Calf Raise", "Legs", "Machine",
+  ex("calf-raise", "Standing Calf Raise", "Calves", "Machine",
     "Builds the gastrocnemius.",
     ["Stand on the platform with the balls of your feet.", "Lower your heels for a deep stretch.", "Rise up onto your toes as high as possible.", "Pause, then lower slowly."], 4, "12-15"),
-  ex("goblet-squat", "Goblet Squat", "Legs", "Dumbbell",
+  ex("goblet-squat", "Goblet Squat", "Quadriceps", "Dumbbell",
     "Front-loaded squat — great for learning depth.",
     ["Hold a dumbbell vertically at your chest.", "Squat down between your knees.", "Keep your chest up and elbows inside knees.", "Stand back up."], 3, "10-12"),
-  ex("hack-squat", "Hack Squat", "Legs", "Machine",
+  ex("hack-squat", "Hack Squat", "Quadriceps", "Machine",
     "Machine squat that hammers the quads.",
     ["Stand on the platform with shoulders under the pads.", "Release the safeties.", "Lower until thighs are parallel or below.", "Press back up."], 3, "8-12"),
 
@@ -241,4 +242,216 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   ex("stair-climber", "Stair Climber", "Cardio", "Machine",
     "Glute-heavy cardio. Log reps as minutes.",
     ["Step onto the machine and hold the rails lightly.", "Set a steady pace.", "Drive through your whole foot.", "Stand tall — don't lean on the rails."], 1, "15-20 min"),
+
+  // FOREARMS
+  ex("wrist-curl", "Wrist Curl", "Forearms", "Dumbbell",
+    "Isolation for the wrist flexors on the inside of the forearm.",
+    ["Sit with forearms on your thighs, palms up, wrists past your knees.", "Let the dumbbells roll down to your fingertips.", "Curl your wrists up as high as possible.", "Lower slowly."], 3, "15-20"),
+  ex("reverse-wrist-curl", "Reverse Wrist Curl", "Forearms", "Dumbbell",
+    "Builds the wrist extensors on top of the forearm.",
+    ["Rest forearms on your thighs, palms facing down.", "Hold light dumbbells with wrists past your knees.", "Raise the backs of your hands towards you.", "Lower under control."], 3, "15-20"),
+  ex("reverse-curl", "Reverse Barbell Curl", "Forearms", "Barbell",
+    "Overhand curl that targets the brachioradialis and forearm extensors.",
+    ["Hold a barbell with an overhand, shoulder-width grip.", "Keep elbows pinned to your sides.", "Curl the bar up to shoulder height.", "Lower slowly to full extension."], 3, "10-15"),
+  ex("farmers-carry", "Farmer's Carry", "Forearms", "Dumbbell",
+    "Loaded carry for grip strength, traps and core stability. Log reps as metres or seconds.",
+    ["Pick up heavy dumbbells with a neutral grip.", "Stand tall with shoulders back and core braced.", "Walk with short, controlled steps.", "Set the weights down with a flat back."], 3, "30-40 m"),
+  ex("dead-hang", "Dead Hang", "Forearms", "Bodyweight",
+    "Grip endurance and shoulder decompression. Log reps as seconds.",
+    ["Grab a pull-up bar with an overhand grip.", "Hang with arms straight and shoulders engaged.", "Breathe steadily and hold.", "Drop down with control."], 3, "30-60 s"),
+  ex("plate-pinch", "Plate Pinch", "Forearms", "Other",
+    "Pinch-grip strength for the fingers and thumb. Log reps as seconds.",
+    ["Place two smooth plates together, smooth sides out.", "Pinch them between fingers and thumb.", "Lift and hold at your side.", "Set down before your grip fails."], 3, "20-40 s"),
+
+  // CALVES
+  ex("seated-calf-raise", "Seated Calf Raise", "Calves", "Machine",
+    "Bent-knee calf raise that emphasises the soleus.",
+    ["Sit with the pad on your lower thighs, balls of feet on the platform.", "Release the safety and lower your heels for a deep stretch.", "Press up onto your toes as high as possible.", "Pause, then lower slowly."], 4, "12-15"),
+  ex("single-leg-calf-raise", "Single-Leg Calf Raise", "Calves", "Bodyweight",
+    "Unilateral calf builder you can do anywhere.",
+    ["Stand on one foot on the edge of a step, holding a support.", "Lower your heel below the step.", "Rise onto your toes as high as possible.", "Complete all reps, then switch legs."], 3, "12-20"),
+  ex("leg-press-calf-raise", "Leg Press Calf Raise", "Calves", "Machine",
+    "Heavy, stable calf raise on the leg press.",
+    ["Sit in the leg press with balls of the feet on the bottom edge of the platform.", "Extend your legs without locking the knees.", "Push the platform away with your toes.", "Return slowly to a deep stretch."], 4, "10-15"),
+
+  // HAMSTRINGS
+  ex("seated-leg-curl", "Seated Leg Curl", "Hamstrings", "Machine",
+    "Seated knee-flexion that trains the hamstrings in a lengthened position.",
+    ["Adjust the machine so your knees line up with the pivot.", "Lock the thigh pad down.", "Curl your heels under the seat.", "Return slowly to full extension."], 3, "10-12"),
+  ex("nordic-curl", "Nordic Hamstring Curl", "Hamstrings", "Bodyweight",
+    "Demanding eccentric exercise that builds strong, resilient hamstrings.",
+    ["Kneel with ankles anchored under a pad or by a partner.", "Keep hips extended and body straight.", "Lower your torso towards the floor as slowly as possible.", "Catch yourself with your hands and push back up."], 3, "4-8"),
+  ex("good-morning", "Good Morning", "Hamstrings", "Barbell",
+    "Hip hinge with the bar on your back for hamstrings and spinal erectors.",
+    ["Place a barbell on your upper back as for a squat.", "Soften your knees and brace your core.", "Hinge at the hips, pushing them back until your torso is near parallel.", "Drive your hips forward to stand up."], 3, "8-10"),
+  ex("dumbbell-romanian-deadlift", "Dumbbell Romanian Deadlift", "Hamstrings", "Dumbbell",
+    "Dumbbell hip hinge for the hamstrings and glutes.",
+    ["Hold dumbbells in front of your thighs.", "Push your hips back with a slight knee bend.", "Lower the weights along your legs until you feel a stretch.", "Squeeze your glutes to stand tall."], 3, "8-12"),
+  ex("glute-ham-raise", "Glute-Ham Raise", "Hamstrings", "Machine",
+    "Knee flexion and hip extension on a GHD bench.",
+    ["Set up on the GHD with feet locked and knees just behind the pad.", "Start upright with your body straight.", "Lower forward under control.", "Pull yourself back up with your hamstrings."], 3, "6-10"),
+
+  // QUADRICEPS
+  ex("bodyweight-squat", "Bodyweight Squat", "Quadriceps", "Bodyweight",
+    "Foundational squat pattern — great for warm-ups and beginners.",
+    ["Stand with feet shoulder-width apart, toes slightly out.", "Sit your hips back and down, chest up.", "Squat until thighs are at least parallel.", "Drive through your heels to stand."], 3, "15-20"),
+  ex("reverse-lunge", "Reverse Lunge", "Quadriceps", "Dumbbell",
+    "Knee-friendly lunge variation for quads and glutes.",
+    ["Stand tall holding dumbbells at your sides.", "Step one foot back and lower until both knees are at 90°.", "Push through the front heel to return.", "Alternate legs."], 3, "10-12"),
+  ex("smith-machine-squat", "Smith Machine Squat", "Quadriceps", "Machine",
+    "Guided squat that lets you push hard with a fixed bar path.",
+    ["Set the bar at shoulder height and step under it.", "Place your feet slightly in front of the bar.", "Unrack and squat to parallel or below.", "Drive back up and re-rack."], 3, "8-12"),
+  ex("wall-sit", "Wall Sit", "Quadriceps", "Bodyweight",
+    "Isometric quad endurance hold. Log reps as seconds.",
+    ["Lean your back flat against a wall.", "Slide down until knees are at 90°.", "Keep weight in your heels.", "Hold for time."], 3, "30-60 s"),
+  ex("sissy-squat", "Sissy Squat", "Quadriceps", "Bodyweight",
+    "Advanced quad isolation with the knees travelling forward.",
+    ["Hold a support with one hand and rise onto your toes.", "Lean back as your knees travel forward and down.", "Lower until you feel a deep quad stretch.", "Drive the knees back to stand."], 3, "8-12"),
+
+  // CHEST (extra)
+  ex("decline-bench-press", "Decline Bench Press", "Chest", "Barbell",
+    "Pressing on a decline bench to emphasise the lower chest.",
+    ["Secure your legs and lie back on a decline bench.", "Unrack the bar with a slightly-wider-than-shoulder grip.", "Lower to your lower chest.", "Press back to lockout."], 3, "6-10"),
+  ex("pec-deck", "Pec Deck", "Chest", "Machine",
+    "Machine fly that keeps constant tension on the chest.",
+    ["Adjust the seat so the handles are at chest height.", "Grip the handles with a slight elbow bend.", "Bring the handles together in front of you.", "Open slowly to a full stretch."], 3, "12-15"),
+  ex("band-chest-press", "Band Chest Press", "Chest", "Band",
+    "Standing chest press with a resistance band — perfect for home.",
+    ["Anchor a band behind you at chest height.", "Hold the handles at your chest, staggered stance.", "Press forward until arms are straight.", "Return slowly."], 3, "12-20"),
+
+  // BACK (extra)
+  ex("inverted-row", "Inverted Row", "Back", "Bodyweight",
+    "Bodyweight horizontal pull using a bar or rings.",
+    ["Hang under a bar set at waist height, body straight.", "Pull your chest to the bar.", "Squeeze your shoulder blades.", "Lower until arms are straight."], 3, "8-12"),
+  ex("chest-supported-row", "Chest-Supported Row", "Back", "Machine",
+    "Supported row that removes lower-back fatigue.",
+    ["Lie face down on the pad with handles in front of you.", "Row the handles towards your ribs.", "Squeeze your upper back.", "Extend arms slowly."], 3, "8-12"),
+  ex("band-pull-apart", "Band Pull-Apart", "Back", "Band",
+    "Rear-delt and upper-back activation for posture and shoulder health.",
+    ["Hold a band at shoulder height with straight arms.", "Pull the band apart until it touches your chest.", "Squeeze your shoulder blades together.", "Return slowly."], 3, "15-20"),
+  ex("back-extension", "Back Extension", "Back", "Bodyweight",
+    "Hip extension on a Roman chair for lower back and glutes.",
+    ["Set the pad just below your hips and lock your feet in.", "Cross arms over your chest.", "Lower your torso with a neutral spine.", "Raise until your body is straight — don't hyperextend."], 3, "12-15"),
+
+  // SHOULDERS (extra)
+  ex("machine-shoulder-press", "Machine Shoulder Press", "Shoulders", "Machine",
+    "Stable overhead press for pushing close to failure safely.",
+    ["Adjust the seat so the handles are at shoulder height.", "Press the handles overhead.", "Stop just short of lockout.", "Lower under control."], 3, "8-12"),
+  ex("kettlebell-press", "Kettlebell Overhead Press", "Shoulders", "Kettlebell",
+    "Single-arm overhead press that challenges stability.",
+    ["Clean a kettlebell to the rack position.", "Brace your core and squeeze your glutes.", "Press the bell overhead until your arm is straight.", "Lower back to the rack."], 3, "6-10"),
+  ex("pike-push-up", "Pike Push-Up", "Shoulders", "Bodyweight",
+    "Bodyweight overhead pressing for the shoulders.",
+    ["Start in a downward-dog position, hips high.", "Bend your elbows to lower your head towards the floor.", "Press back up to straight arms.", "Keep your hips high throughout."], 3, "8-12"),
+
+  // BICEPS (extra)
+  ex("concentration-curl", "Concentration Curl", "Biceps", "Dumbbell",
+    "Seated, strict curl for a strong peak contraction.",
+    ["Sit and brace your elbow against your inner thigh.", "Curl the dumbbell towards your shoulder.", "Squeeze at the top.", "Lower slowly to full extension."], 3, "10-12"),
+  ex("band-curl", "Band Curl", "Biceps", "Band",
+    "Biceps curl with a resistance band.",
+    ["Stand on the band and hold the handles.", "Keep elbows at your sides.", "Curl your hands to your shoulders.", "Lower under control."], 3, "12-20"),
+  ex("ez-bar-curl", "EZ-Bar Curl", "Biceps", "Barbell",
+    "Curl with an angled bar that is easier on the wrists.",
+    ["Grip the EZ bar on the inner angles.", "Stand tall with elbows by your sides.", "Curl the bar up to your chest.", "Lower slowly."], 3, "8-12"),
+
+  // TRICEPS (extra)
+  ex("diamond-push-up", "Diamond Push-Up", "Triceps", "Bodyweight",
+    "Close-hand push-up that shifts the work to the triceps.",
+    ["Place your hands together under your chest, forming a diamond.", "Keep your body in a straight line.", "Lower your chest to your hands.", "Press back up."], 3, "8-15"),
+  ex("rope-overhead-extension", "Cable Overhead Extension", "Triceps", "Cable",
+    "Overhead triceps extension with a rope for a deep long-head stretch.",
+    ["Face away from a low pulley holding a rope behind your head.", "Stagger your stance and lean forward slightly.", "Extend your arms overhead.", "Return slowly to a deep stretch."], 3, "10-15"),
+
+  // GLUTES (extra)
+  ex("cable-pull-through", "Cable Pull-Through", "Glutes", "Cable",
+    "Hip hinge with a low cable for the glutes and hamstrings.",
+    ["Face away from a low pulley holding a rope between your legs.", "Hinge at the hips, letting the rope travel back.", "Drive your hips forward to stand tall.", "Squeeze your glutes at the top."], 3, "12-15"),
+  ex("lateral-band-walk", "Lateral Band Walk", "Glutes", "Band",
+    "Banded side steps for the glute medius.",
+    ["Place a mini band above your knees or around your ankles.", "Sit into a quarter squat.", "Step sideways keeping tension on the band.", "Complete the reps, then return the other way."], 3, "12-15"),
+  ex("single-leg-glute-bridge", "Single-Leg Glute Bridge", "Glutes", "Bodyweight",
+    "Unilateral bridge for glute strength and balance.",
+    ["Lie on your back with one knee bent and the other leg straight.", "Drive through the planted heel to lift your hips.", "Squeeze your glute at the top.", "Lower and repeat, then switch sides."], 3, "10-12"),
+
+  // ABS (extra)
+  ex("dead-bug", "Dead Bug", "Abs", "Bodyweight",
+    "Beginner-friendly anti-extension core exercise.",
+    ["Lie on your back with arms up and knees at 90°.", "Press your lower back into the floor.", "Extend the opposite arm and leg slowly.", "Return and alternate sides."], 3, "10-12"),
+  ex("side-plank", "Side Plank", "Abs", "Bodyweight",
+    "Lateral core stability for the obliques. Log reps as seconds.",
+    ["Lie on your side and prop yourself on your forearm.", "Lift your hips so your body is straight.", "Hold without letting the hips drop.", "Switch sides."], 3, "30-45 s"),
+  ex("bicycle-crunch", "Bicycle Crunch", "Abs", "Bodyweight",
+    "Rotational crunch for the abs and obliques.",
+    ["Lie on your back with hands behind your head.", "Bring one knee in while rotating the opposite elbow towards it.", "Switch sides in a pedalling motion.", "Keep your lower back on the floor."], 3, "20-30"),
+  ex("pallof-press", "Pallof Press", "Abs", "Cable",
+    "Anti-rotation press that builds a stable core.",
+    ["Stand side-on to a cable at chest height.", "Hold the handle at your chest.", "Press it straight out without letting your torso rotate.", "Return slowly and switch sides."], 3, "10-12"),
+  ex("mountain-climber", "Mountain Climber", "Abs", "Bodyweight",
+    "Dynamic core and conditioning drill.",
+    ["Start in a high plank.", "Drive one knee towards your chest.", "Quickly switch legs.", "Keep your hips level."], 3, "20-30"),
+
+  // CARDIO (extra)
+  ex("elliptical", "Elliptical", "Cardio", "Machine",
+    "Low-impact full-body cardio. Log reps as minutes.",
+    ["Step on and hold the handles.", "Start at a comfortable resistance.", "Push and pull with arms and legs.", "Keep a steady pace."], 1, "20-30 min"),
+  ex("assault-bike", "Air Bike", "Cardio", "Machine",
+    "Fan bike intervals for brutal conditioning. Log reps as calories or minutes.",
+    ["Adjust the seat height.", "Push and pull the handles while pedalling.", "Go all-out for the work interval.", "Recover at an easy pace."], 5, "30 s"),
+  ex("box-jump", "Box Jump", "Cardio", "Bodyweight",
+    "Explosive plyometric jump for power.",
+    ["Stand in front of a sturdy box.", "Swing your arms and jump onto the box.", "Land softly with both feet.", "Step down and reset."], 4, "5-8"),
+  ex("jumping-jacks", "Jumping Jacks", "Cardio", "Bodyweight",
+    "Classic warm-up and conditioning movement.",
+    ["Stand with feet together and arms at your sides.", "Jump your feet out while raising your arms overhead.", "Jump back to the start.", "Keep a steady rhythm."], 3, "30-50"),
+  ex("sprint-intervals", "Sprint Intervals", "Cardio", "Bodyweight",
+    "Short, maximal sprints with recovery. Log reps as seconds.",
+    ["Warm up thoroughly.", "Sprint at near-maximal effort.", "Walk or jog to recover.", "Repeat for the planned rounds."], 6, "20-30 s"),
+  ex("battle-ropes", "Battle Ropes", "Cardio", "Other",
+    "Upper-body conditioning with heavy ropes. Log reps as seconds.",
+    ["Hold one rope end in each hand, athletic stance.", "Alternate arms to create waves.", "Keep your core braced and hips low.", "Work for the interval, then rest."], 4, "30 s"),
 ];
+
+// ---------------------------------------------------------------------------
+// Enrichment: difficulty, exercise type and muscle targets for the built-in library
+// ---------------------------------------------------------------------------
+
+const ADVANCED = new Set([
+  "deadlift", "front-squat", "sumo-deadlift", "good-morning", "nordic-curl", "glute-ham-raise",
+  "sissy-squat", "hanging-leg-raise", "ab-wheel", "chest-dip", "box-jump", "assault-bike", "sprint-intervals",
+]);
+const BEGINNER = new Set([
+  "chest-press-machine", "push-up", "lat-pulldown", "seated-cable-row", "face-pull", "lateral-raise",
+  "dumbbell-curl", "hammer-curl", "cable-curl", "tricep-pushdown", "leg-press", "leg-extension", "leg-curl",
+  "calf-raise", "goblet-squat", "glute-bridge", "hip-abduction", "plank", "crunch", "treadmill-run",
+  "rowing-machine", "stationary-bike", "stair-climber", "wrist-curl", "reverse-wrist-curl", "dead-hang",
+  "seated-calf-raise", "single-leg-calf-raise", "leg-press-calf-raise", "seated-leg-curl", "bodyweight-squat",
+  "wall-sit", "pec-deck", "band-chest-press", "chest-supported-row", "band-pull-apart", "machine-shoulder-press",
+  "concentration-curl", "band-curl", "lateral-band-walk", "single-leg-glute-bridge", "dead-bug", "side-plank",
+  "bicycle-crunch", "elliptical", "jumping-jacks", "farmers-carry", "back-extension", "straight-arm-pulldown",
+  "cable-crossover", "dumbbell-fly", "tricep-kickback", "front-raise", "rear-delt-fly", "shrug", "cable-crunch",
+]);
+const PLYOMETRIC = new Set(["box-jump", "burpee", "jump-rope", "jumping-jacks"]);
+const STABILITY = new Set(["plank", "side-plank", "dead-bug", "pallof-press", "wall-sit", "dead-hang", "farmers-carry", "plate-pinch"]);
+
+function enrich(e: Exercise): Exercise {
+  const m = EXERCISE_MUSCLES[e.id];
+  const type: ExerciseType = PLYOMETRIC.has(e.id)
+    ? "plyometric"
+    : e.muscleGroup === "Cardio"
+      ? "cardio"
+      : STABILITY.has(e.id)
+        ? "mobility"
+        : m?.compound
+          ? "compound"
+          : "isolation";
+  return {
+    ...e,
+    difficulty: ADVANCED.has(e.id) ? "advanced" : BEGINNER.has(e.id) ? "beginner" : "intermediate",
+    type,
+    primaryMuscles: m?.primary ?? [],
+    secondaryMuscles: m?.secondary ?? [],
+  };
+}
+
+export const DEFAULT_EXERCISES: Exercise[] = BASE_EXERCISES.map(enrich);

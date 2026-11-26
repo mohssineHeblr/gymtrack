@@ -22,7 +22,7 @@ export function parseRange(reps: string | undefined, fallback: [number, number] 
 
 /** Weight step for an exercise, in kg. */
 export function weightStep(ex: Pick<Exercise, "id" | "muscleGroup" | "equipment">, units: Units): number {
-  const lower = ["Legs", "Glutes"].includes(ex.muscleGroup) && musclesFor(ex).compound;
+  const lower = ["Quadriceps", "Hamstrings", "Glutes"].includes(ex.muscleGroup) && musclesFor(ex).compound;
   if (units === "lbs") {
     const lb = ex.equipment === "Dumbbell" || ex.equipment === "Kettlebell" ? 5 : lower ? 10 : 5;
     return lb / 2.2046226218;

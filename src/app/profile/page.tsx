@@ -20,11 +20,12 @@ import {
 } from "lucide-react";
 import { TrainingSettings } from "@/components/TrainingSettings";
 import { Button, Card, Field, Input, PageHeader, SectionTitle, Segmented, Select, TextArea } from "@/components/ui";
-import { useGym } from "@/lib/store";
+import { useGym, DEFAULT_PROFILE, migrateState, type GymState } from "@/lib/store";
 import { useAuth, signOut } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { syncNow } from "@/lib/sync";
 import { generateSampleData } from "@/lib/sample-data";
+import { TimerSettingsPanel } from "@/components/TimerSettingsPanel";
 import { useOnline } from "@/lib/hooks";
 import { displayToKg, kgToDisplay, parseNum, relativeDay, formatTime } from "@/lib/utils";
 import type { FitnessGoal, Theme, Units } from "@/lib/types";
@@ -63,14 +64,16 @@ export default function ProfilePage() {
     const s = useGym.getState();
     const data = {
       app: "gymtrack",
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       profile: s.profile,
       customExercises: s.customExercises,
       programs: s.programs,
       workouts: s.workouts,
       body: s.body,
-      nutrition: s.nutrition,
+      meals: s.meals,
+      foods: s.foods,
+      savedMeals: s.savedMeals,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -88,13 +91,17 @@ export default function ProfilePage() {
       if (!confirm("Replace all current data with this backup?")) return;
       const now = new Date().toISOString();
       const touch = <T extends { updatedAt?: string }>(arr: T[] = []) => arr.map((x) => ({ ...x, updatedAt: now }));
+      // v1 backups contain flat "nutrition" logs — migrate them into meals
+      const migrated = migrateState(data, Number(data.version ?? 1)) as Partial<GymState>;
       replaceData({
-        profile: { ...data.profile, updatedAt: now },
-        customExercises: touch(data.customExercises),
-        programs: touch(data.programs),
-        workouts: touch(data.workouts),
-        body: touch(data.body),
-        nutrition: touch(data.nutrition),
+        profile: { ...DEFAULT_PROFILE, ...migrated.profile, timer: { ...DEFAULT_PROFILE.timer, ...migrated.profile?.timer }, updatedAt: now },
+        customExercises: touch(migrated.customExercises),
+        programs: touch(migrated.programs),
+        workouts: touch(migrated.workouts),
+        body: touch(migrated.body),
+        meals: touch(migrated.meals),
+        foods: touch(migrated.foods),
+        savedMeals: touch(migrated.savedMeals),
       });
       alert("Backup restored.");
     } catch (e) {
@@ -181,6 +188,11 @@ export default function ProfilePage() {
       </SectionTitle>
       <Card>
         <TrainingSettings hideGoal />
+      </Card>
+
+      <SectionTitle>Rest timer</SectionTitle>
+      <Card>
+        <TimerSettingsPanel />
       </Card>
 
       <SectionTitle>Preferences</SectionTitle>
@@ -292,7 +304,7 @@ export default function ProfilePage() {
             replaceData({
               workouts: [...s.workouts, ...sample.workouts].sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
               body: [...s.body, ...sample.body].sort((a, b) => a.date.localeCompare(b.date)),
-              nutrition: [...s.nutrition, ...sample.nutrition],
+              meals: [...s.meals, ...sample.meals],
             });
           }}
         >

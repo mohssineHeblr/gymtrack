@@ -29,6 +29,7 @@ import { BodyMap } from "@/components/BodyMap";
 import { recoveryColors, useRecovery } from "@/lib/use-recovery";
 import { MUSCLES, MUSCLE_INFO } from "@/data/muscles";
 import { LEVEL_COLOR, recoveryLevel } from "@/lib/recovery";
+import { dayTotals } from "@/lib/nutrition";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function Dashboard() {
   const workouts = useGym((s) => s.workouts);
   const programs = useGym((s) => s.programs);
   const body = useGym((s) => s.body);
-  const nutrition = useGym((s) => s.nutrition);
+  const meals = useGym((s) => s.meals);
   const active = useGym((s) => s.activeWorkout);
   const syncStatus = useGym((s) => s.sync.status);
   const startWorkout = useGym((s) => s.startWorkout);
@@ -66,7 +67,7 @@ export default function Dashboard() {
   );
 
   const todayKey = toDateKey();
-  const todayCalories = nutrition.filter((n) => n.date === todayKey).reduce((a, n) => a + n.calories, 0);
+  const todayCalories = dayTotals(meals, todayKey).calories;
 
   const quickStart = () => {
     if (!active) startWorkout({ name: "Quick Workout" });

@@ -17,11 +17,17 @@ import { getSupabase } from "./supabase";
 import type {
   BodyMeasurement,
   Exercise,
-  NutritionLog,
+  Food,
+  MealItem,
+  MealRecord,
   Profile,
+  SavedMeal,
   Workout,
   WorkoutProgram,
 } from "./types";
+import { normalizeGroup } from "./types";
+import { FOOD_DATABASE } from "@/data/foods";
+import { DEFAULT_PROFILE } from "./store";
 import { nowIso } from "./utils";
 
 const CHUNK = 400;
@@ -53,7 +59,9 @@ export function hasLocalChanges(): boolean {
     s.programs.some((p) => p.updatedAt > since) ||
     s.workouts.some((w) => w.updatedAt > since) ||
     s.body.some((b) => b.updatedAt > since) ||
-    s.nutrition.some((n) => n.updatedAt > since)
+    s.meals.some((m) => m.updatedAt > since) ||
+    s.foods.some((f) => (f.updatedAt ?? "") > since) ||
+    s.savedMeals.some((m) => m.updatedAt > since)
   );
 }
 
@@ -122,6 +130,10 @@ async function push(sb: SupabaseClient, userId: string) {
         position,
         rest_seconds: we.restSeconds,
         notes: we.notes ?? null,
+        group_id: we.groupId ?? null,
+        technique: we.technique ?? "standard",
+        tempo: we.technique === "tempo" ? (we.tempo ?? null) : null,
+        target_reps: we.targetReps ?? null,
       })),
     );
     for (const c of chunks(weRows)) await run(sb.from("workout_exercises").insert(c));
@@ -136,19 +148,56 @@ async function push(sb: SupabaseClient, userId: string) {
           reps: st.reps,
           completed: st.completed,
           set_type: st.type,
+          rest_seconds: st.restSeconds ?? null,
         })),
       ),
     );
     for (const c of chunks(setRows)) await run(sb.from("workout_sets").insert(c));
+    const stageRows = batch.flatMap((w) =>
+      w.exercises.flatMap((we) =>
+        we.sets.flatMap((st) =>
+          (st.stages ?? []).map((x, position) => ({
+            id: x.id,
+            workout_set_id: st.id,
+            user_id: userId,
+            position,
+            weight: x.weight,
+            reps: x.reps,
+          })),
+        ),
+      ),
+    );
+    for (const c of chunks(stageRows)) await run(sb.from("workout_set_stages").insert(c));
   }
 
   // Body measurements
   const bodyRows = s.body.filter((b) => newer(b.updatedAt, since)).map((b) => bodyToRow(b, userId));
   for (const c of chunks(bodyRows)) await run(sb.from("body_measurements").upsert(c));
 
-  // Nutrition
-  const nutRows = s.nutrition.filter((n) => newer(n.updatedAt, since)).map((n) => nutritionToRow(n, userId));
-  for (const c of chunks(nutRows)) await run(sb.from("nutrition_logs").upsert(c));
+  // Foods (custom + cached Open Food Facts) — before meals, which reference them
+  const foodRows = s.foods.filter((f) => newer(f.updatedAt, since)).map((f) => foodToRow(f, userId));
+  for (const c of chunks(foodRows)) await run(sb.from("foods").upsert(c));
+
+  // Meals (+ items, replaced wholesale)
+  const knownFoods = new Set([...FOOD_DATABASE.map((f) => f.id), ...s.foods.map((f) => f.id)]);
+  const dirtyMeals = s.meals.filter((m) => newer(m.updatedAt, since));
+  for (const batch of chunks(dirtyMeals, 100)) {
+    await run(sb.from("meals").upsert(batch.map((m) => mealToRow(m, userId))));
+    await run(sb.from("meal_items").delete().in("meal_id", batch.map((m) => m.id)));
+    const itemRows = batch.flatMap((m) => m.items.map((it, position) => mealItemToRow(it, m.id, position, userId, knownFoods)));
+    for (const c of chunks(itemRows)) await run(sb.from("meal_items").insert(c));
+  }
+
+  // Saved meals
+  const savedRows = s.savedMeals.filter((m) => newer(m.updatedAt, since)).map((m) => ({
+    id: m.id,
+    user_id: userId,
+    name: m.name,
+    items: m.items,
+    deleted: false,
+    updated_at: m.updatedAt,
+  }));
+  for (const c of chunks(savedRows)) await run(sb.from("saved_meals").upsert(c));
 
   // Deletions (soft delete)
   const pending = [...s.sync.pendingDeletions];
@@ -209,13 +258,17 @@ async function pull(sb: SupabaseClient) {
   const sinceMargin = since ? new Date(new Date(since).getTime() - 10 * 60 * 1000).toISOString() : null;
   const filtered = <Q extends { gte: (c: string, v: string) => Q }>(q: Q) => (sinceMargin ? q.gte("updated_at", sinceMargin) : q);
 
-  const [profiles, exercises, programs, workouts, body, nutrition] = await Promise.all([
+  // typed as plain string so the client does not try to infer the nested shape
+  const workoutSelect: string = "*, workout_exercises(*, workout_sets(*, workout_set_stages(*)))";
+  const [profiles, exercises, programs, workouts, body, foods, meals, savedMeals] = await Promise.all([
     run<Row[]>(sb.from("profiles").select("*").limit(1)),
     run<Row[]>(filtered(sb.from("exercises").select("*").eq("is_custom", true))),
     run<Row[]>(filtered(sb.from("workout_programs").select("*"))),
-    run<Row[]>(filtered(sb.from("workouts").select("*, workout_exercises(*, workout_sets(*))"))),
+    run<Row[]>(filtered(sb.from("workouts").select(workoutSelect))),
     run<Row[]>(filtered(sb.from("body_measurements").select("*"))),
-    run<Row[]>(filtered(sb.from("nutrition_logs").select("*"))),
+    run<Row[]>(filtered(sb.from("foods").select("*"))),
+    run<Row[]>(filtered(sb.from("meals").select("*, meal_items(*)"))),
+    run<Row[]>(filtered(sb.from("saved_meals").select("*"))),
   ]);
 
   const s = useGym.getState();
@@ -229,7 +282,11 @@ async function pull(sb: SupabaseClient) {
   if (workouts?.length)
     patch.workouts = mergeById(s.workouts, workouts, rowToWorkout).sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   if (body?.length) patch.body = mergeById(s.body, body, rowToBody).sort((a, b) => a.date.localeCompare(b.date));
-  if (nutrition?.length) patch.nutrition = mergeById(s.nutrition, nutrition, rowToNutrition);
+  // built-in foods (user_id null) are bundled with the app — only merge the user's own
+  const ownFoods = (foods ?? []).filter((r) => r.user_id != null);
+  if (ownFoods.length) patch.foods = mergeById(s.foods, ownFoods, rowToFood);
+  if (meals?.length) patch.meals = mergeById(s.meals, meals, rowToMeal);
+  if (savedMeals?.length) patch.savedMeals = mergeById(s.savedMeals, savedMeals, rowToSavedMeal);
 
   if (Object.keys(patch).length) useGym.setState(patch);
 }
@@ -258,18 +315,21 @@ function profileToRow(p: Profile, userId: string) {
       favoriteExercises: p.favoriteExercises,
       excludedExercises: p.excludedExercises,
       smart: p.smart,
+      favoriteFoods: p.favoriteFoods,
     },
+    timer_settings: p.timer,
     updated_at: p.updatedAt,
   };
 }
 
-function prefsFromRow(v: unknown, cur: Profile): Pick<Profile, "equipment" | "favoriteExercises" | "excludedExercises" | "smart"> {
+function prefsFromRow(v: unknown, cur: Profile): Pick<Profile, "equipment" | "favoriteExercises" | "excludedExercises" | "smart" | "favoriteFoods"> {
   const p = (v && typeof v === "object" ? v : {}) as Partial<Profile>;
   return {
     equipment: Array.isArray(p.equipment) && p.equipment.length ? p.equipment : cur.equipment,
     favoriteExercises: Array.isArray(p.favoriteExercises) ? p.favoriteExercises : cur.favoriteExercises,
     excludedExercises: Array.isArray(p.excludedExercises) ? p.excludedExercises : cur.excludedExercises,
     smart: { ...cur.smart, ...(p.smart ?? {}) },
+    favoriteFoods: Array.isArray(p.favoriteFoods) ? p.favoriteFoods : cur.favoriteFoods,
   };
 }
 
@@ -286,6 +346,7 @@ function rowToProfile(r: Row, cur: Profile): Profile {
     nutritionGoals: { ...cur.nutritionGoals, ...((r.nutrition_goals as object) ?? {}) },
     activeProgramId: (r.active_program_id as string) ?? null,
     ...prefsFromRow(r.preferences, cur),
+    timer: { ...DEFAULT_PROFILE.timer, ...cur.timer, ...((r.timer_settings as object) ?? {}) },
     updatedAt: iso(r.updated_at),
   };
 }
@@ -301,6 +362,11 @@ function exerciseToRow(e: Exercise, userId: string) {
     instructions: e.instructions,
     recommended_sets: e.recommendedSets,
     recommended_reps: e.recommendedReps,
+    difficulty: e.difficulty ?? "intermediate",
+    exercise_type: e.type ?? "isolation",
+    primary_muscles: e.primaryMuscles ?? [],
+    secondary_muscles: e.secondaryMuscles ?? [],
+    image: e.image ?? null,
     is_custom: true,
     deleted: false,
     updated_at: e.updatedAt ?? nowIso(),
@@ -311,12 +377,17 @@ function rowToExercise(r: Row): Exercise {
   return {
     id: String(r.id),
     name: String(r.name),
-    muscleGroup: r.muscle_group as Exercise["muscleGroup"],
+    muscleGroup: normalizeGroup(String(r.muscle_group)),
     equipment: r.equipment as Exercise["equipment"],
     description: String(r.description ?? ""),
     instructions: (r.instructions as string[]) ?? [],
     recommendedSets: Number(r.recommended_sets ?? 3),
     recommendedReps: String(r.recommended_reps ?? "8-12"),
+    difficulty: (r.difficulty as Exercise["difficulty"]) ?? "intermediate",
+    type: (r.exercise_type as Exercise["type"]) ?? undefined,
+    primaryMuscles: (r.primary_muscles as Exercise["primaryMuscles"]) ?? [],
+    secondaryMuscles: (r.secondary_muscles as Exercise["secondaryMuscles"]) ?? [],
+    image: (r.image as string) ?? null,
     isCustom: true,
     updatedAt: iso(r.updated_at),
   };
@@ -381,6 +452,10 @@ function rowToWorkout(r: Row): Workout {
       exerciseId: String(we.exercise_id),
       restSeconds: Number(we.rest_seconds ?? 90),
       notes: (we.notes as string) ?? undefined,
+      groupId: (we.group_id as string) ?? null,
+      technique: ((we.technique as string) ?? "standard") as Workout["exercises"][number]["technique"],
+      tempo: (we.tempo as string) ?? undefined,
+      targetReps: (we.target_reps as string) ?? undefined,
       sets: ((we.workout_sets as Row[]) ?? [])
         .sort((a, b) => Number(a.position) - Number(b.position))
         .map((st) => ({
@@ -389,6 +464,12 @@ function rowToWorkout(r: Row): Workout {
           reps: num(st.reps),
           completed: Boolean(st.completed),
           type: (st.set_type as Workout["exercises"][number]["sets"][number]["type"]) ?? "normal",
+          restSeconds: st.rest_seconds == null ? null : Number(st.rest_seconds),
+          stages: ((st.workout_set_stages as Row[]) ?? []).length
+            ? ((st.workout_set_stages as Row[]) ?? [])
+                .sort((a, b) => Number(a.position) - Number(b.position))
+                .map((x) => ({ id: String(x.id), weight: num(x.weight), reps: num(x.reps) }))
+            : undefined,
         })),
     })),
   };
@@ -426,30 +507,82 @@ function rowToBody(r: Row): BodyMeasurement {
   };
 }
 
-function nutritionToRow(n: NutritionLog, userId: string) {
+function foodToRow(f: Food, userId: string) {
   return {
-    id: n.id,
+    id: f.id,
     user_id: userId,
-    log_date: n.date,
-    name: n.name,
-    calories: n.calories,
-    protein: n.protein,
-    carbs: n.carbs,
-    fat: n.fat,
+    name: f.name,
+    brand: f.brand ?? null,
+    category: f.category,
+    calories: f.per100.calories,
+    protein: f.per100.protein,
+    carbs: f.per100.carbs,
+    fat: f.per100.fat,
+    serving_grams: f.servingGrams ?? null,
+    serving_label: f.servingLabel ?? null,
+    source: f.source === "builtin" ? "custom" : f.source,
+    barcode: f.barcode ?? null,
     deleted: false,
-    updated_at: n.updatedAt,
+    updated_at: f.updatedAt ?? nowIso(),
   };
 }
 
-function rowToNutrition(r: Row): NutritionLog {
+function rowToFood(r: Row): Food {
+  return {
+    id: String(r.id),
+    name: String(r.name),
+    brand: (r.brand as string) ?? undefined,
+    category: (r.category as Food["category"]) ?? "Other",
+    per100: { calories: Number(r.calories ?? 0), protein: Number(r.protein ?? 0), carbs: Number(r.carbs ?? 0), fat: Number(r.fat ?? 0) },
+    servingGrams: num(r.serving_grams),
+    servingLabel: (r.serving_label as string) ?? undefined,
+    source: (r.source as Food["source"]) ?? "custom",
+    barcode: (r.barcode as string) ?? undefined,
+    updatedAt: iso(r.updated_at),
+  };
+}
+
+function mealToRow(m: MealRecord, userId: string) {
+  return { id: m.id, user_id: userId, log_date: m.date, meal_type: m.type, deleted: false, updated_at: m.updatedAt };
+}
+
+function mealItemToRow(it: MealItem, mealId: string, position: number, userId: string, knownFoods: Set<string>) {
+  return {
+    id: it.id,
+    meal_id: mealId,
+    user_id: userId,
+    food_id: it.foodId && knownFoods.has(it.foodId) ? it.foodId : null,
+    position,
+    name: it.name,
+    brand: it.brand ?? null,
+    grams: it.grams,
+    per100: it.per100,
+    calories: it.macros.calories,
+    protein: it.macros.protein,
+    carbs: it.macros.carbs,
+    fat: it.macros.fat,
+  };
+}
+
+function rowToMeal(r: Row): MealRecord {
+  const items = ((r.meal_items as Row[]) ?? []).sort((a, b) => Number(a.position) - Number(b.position));
   return {
     id: String(r.id),
     date: String(r.log_date),
-    name: String(r.name),
-    calories: Number(r.calories ?? 0),
-    protein: Number(r.protein ?? 0),
-    carbs: Number(r.carbs ?? 0),
-    fat: Number(r.fat ?? 0),
+    type: r.meal_type as MealRecord["type"],
     updatedAt: iso(r.updated_at),
+    items: items.map((it) => ({
+      id: String(it.id),
+      foodId: (it.food_id as string) ?? null,
+      name: String(it.name),
+      brand: (it.brand as string) ?? undefined,
+      grams: num(it.grams),
+      per100: (it.per100 as MealItem["per100"]) ?? null,
+      macros: { calories: Number(it.calories ?? 0), protein: Number(it.protein ?? 0), carbs: Number(it.carbs ?? 0), fat: Number(it.fat ?? 0) },
+    })),
   };
+}
+
+function rowToSavedMeal(r: Row): SavedMeal {
+  return { id: String(r.id), name: String(r.name), items: (r.items as SavedMeal["items"]) ?? [], updatedAt: iso(r.updated_at) };
 }

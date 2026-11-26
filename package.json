@@ -9,7 +9,8 @@
     "start:lan": "next start -H 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/generate-icons.mjs",
-    "seed:sql": "node scripts/generate-schema.ts"
+    "seed:sql": "node --import ./scripts/ts-resolve.mjs scripts/generate-schema.ts",
+    "vapid": "node scripts/generate-vapid.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",

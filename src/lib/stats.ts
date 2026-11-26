@@ -10,8 +10,10 @@ export function e1rm(weight: number, reps: number) {
 
 const isWork = (s: WorkoutSet) => s.completed && s.type !== "warmup";
 
+/** Volume of a set including its drop / mini-set stages */
 export function setVolume(s: WorkoutSet) {
-  return (s.weight ?? 0) * (s.reps ?? 0);
+  const stages = s.stages?.reduce((a, x) => a + (x.weight ?? 0) * (x.reps ?? 0), 0) ?? 0;
+  return (s.weight ?? 0) * (s.reps ?? 0) + stages;
 }
 
 export function workoutVolume(w: Workout) {

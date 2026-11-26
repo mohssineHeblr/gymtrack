@@ -10,6 +10,7 @@ import { TrendChart } from "./charts";
 import { useExerciseMap, useGym } from "@/lib/store";
 import { computePRs, exerciseProgression } from "@/lib/stats";
 import { formatDate, formatWeight, kgToDisplay } from "@/lib/utils";
+import { DIFFICULTY_LABEL, EXERCISE_TYPE_LABEL } from "@/lib/types";
 
 export function ExerciseDetail({
   exerciseId,
@@ -48,9 +49,19 @@ export function ExerciseDetail({
     <Sheet open={!!ex} onClose={onClose} title={ex?.name}>
       {ex && (
         <div className="space-y-5">
+          {ex.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ex.image} alt={ex.name} className="max-h-56 w-full rounded-2xl object-cover" />
+          )}
           <div className="flex flex-wrap gap-2">
             <Badge>{ex.muscleGroup}</Badge>
             <Badge className="bg-surface-3 text-fg">{ex.equipment}</Badge>
+            {ex.type && <Badge className="bg-surface-3 text-fg">{EXERCISE_TYPE_LABEL[ex.type]}</Badge>}
+            {ex.difficulty && (
+              <Badge className={cn("bg-surface-3", ex.difficulty === "advanced" ? "text-danger" : ex.difficulty === "beginner" ? "text-accent" : "text-warn")}>
+                {DIFFICULTY_LABEL[ex.difficulty]}
+              </Badge>
+            )}
             {ex.isCustom && <Badge className="bg-surface-3 text-muted">Custom</Badge>}
           </div>
           <p className="text-[15px] leading-relaxed text-fg/90">{ex.description}</p>

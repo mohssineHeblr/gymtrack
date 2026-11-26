@@ -7,6 +7,7 @@ import { Button, Card, EmptyState, Input, PageHeader, Spinner, TextArea } from "
 import { useExerciseMap, useGym } from "@/lib/store";
 import { computePRs, e1rm, workoutDurationSec, workoutSetCount, workoutVolume } from "@/lib/stats";
 import { formatCompact, formatDate, formatDuration, formatTime, kgToDisplay } from "@/lib/utils";
+import { TECHNIQUE_INFO, groupKind, groupLetters } from "@/lib/techniques";
 
 export default function WorkoutViewPage() {
   return (
@@ -43,6 +44,7 @@ function WorkoutView() {
   }
 
   const volume = workoutVolume(w);
+  const letters = groupLetters(w.exercises);
   let prCount = 0;
   const exerciseRows = w.exercises.map((we) => {
     const prior = priorPRs.get(we.exerciseId);
@@ -108,14 +110,34 @@ function WorkoutView() {
       {w.notes && !editing && <Card className="mt-3 text-sm text-fg/90">{w.notes}</Card>}
 
       <div className="mt-4 space-y-3">
-        {exerciseRows.map(({ we, sets }) => {
+        {exerciseRows.map(({ we, sets }, idx) => {
           let n = 0;
+          const letter = we.groupId ? letters.get(we.groupId) : null;
+          const members = we.groupId ? w.exercises.filter((x) => x.groupId === we.groupId) : [];
+          const pos = we.groupId ? members.findIndex((x) => x.id === we.id) + 1 : 0;
+          const firstOfGroup = we.groupId && (idx === 0 || w.exercises[idx - 1].groupId !== we.groupId);
           return (
-            <Card key={we.id}>
-              <div className="font-bold text-accent">{exMap.get(we.exerciseId)?.name ?? we.exerciseId}</div>
+            <div key={we.id}>
+            {firstOfGroup && (
+              <div className="mb-1.5 mt-1 px-1 text-xs font-bold uppercase tracking-wider text-info">
+                {groupKind(members.length)} {letter} · {members.length} exercises
+              </div>
+            )}
+            <Card className={we.groupId ? "border-info/40" : undefined}>
+              <div className="flex items-center gap-2">
+                {letter && <span className="rounded-lg bg-info/15 px-1.5 py-0.5 text-xs font-extrabold text-info">{letter}{pos}</span>}
+                <div className="min-w-0 flex-1 truncate font-bold text-accent">{exMap.get(we.exerciseId)?.name ?? we.exerciseId}</div>
+                {we.technique && we.technique !== "standard" && (
+                  <span className="shrink-0 rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-bold text-warn">
+                    {TECHNIQUE_INFO[we.technique].short}
+                    {we.technique === "tempo" && we.tempo ? ` ${we.tempo}` : ""}
+                  </span>
+                )}
+              </div>
               <div className="mt-2 space-y-1">
                 {sets.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3 py-2 text-sm">
+                  <div key={s.id} className="space-y-1">
+                  <div className="flex items-center justify-between rounded-xl bg-surface-2 px-3 py-2 text-sm">
                     <span className="w-8 font-bold text-muted">{s.type === "normal" ? ++n : s.type[0].toUpperCase()}</span>
                     <span className="flex-1 font-semibold tabular-nums">
                       {s.weight ? `${kgToDisplay(s.weight, units)} ${units}` : "BW"} × {s.reps ?? 0}
@@ -129,9 +151,19 @@ function WorkoutView() {
                       1RM {formatCompact(kgToDisplay(e1rm(s.weight ?? 0, s.reps ?? 0), units) ?? 0)}
                     </span>
                   </div>
+                  {s.stages?.map((st, si) => (
+                    <div key={st.id} className="ml-6 flex items-center gap-2 rounded-xl border-l-2 border-warn/60 bg-surface-2/60 px-3 py-1.5 text-[13px]">
+                      <span className="w-8 text-xs font-bold text-warn">{we.technique === "dropset" || s.type === "drop" ? `D${si + 1}` : `+${si + 1}`}</span>
+                      <span className="font-semibold tabular-nums">
+                        {st.weight ? `${kgToDisplay(st.weight, units)} ${units}` : "BW"} × {st.reps ?? 0}
+                      </span>
+                    </div>
+                  ))}
+                  </div>
                 ))}
               </div>
             </Card>
+            </div>
           );
         })}
       </div>

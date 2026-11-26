@@ -1,5 +1,5 @@
 /* GYMTRACK service worker — offline app shell + runtime caching */
-const VERSION = "gymtrack-v1.1.0";
+const VERSION = "gymtrack-v2.0.0";
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -132,6 +132,49 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => cached || new Response("", { status: 504 }));
       return cached || network;
+    })(),
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Rest-timer notifications
+// ---------------------------------------------------------------------------
+
+// Web Push fallback (sent by the rest-timer-push Edge Function while the app is suspended).
+// The push has no payload; iOS/Android play the standard notification sound.
+self.addEventListener("push", (event) => {
+  event.waitUntil(
+    (async () => {
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const visible = wins.some((c) => c.visibilityState === "visible");
+      await self.registration.showNotification("GYMTRACK · Rest finished", {
+        body: "Time for your next set 💪",
+        tag: "rest-timer",
+        renotify: true,
+        silent: visible, // the open app already played its own alarm
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        vibrate: [250, 120, 250],
+        data: { url: "/workout" },
+      });
+    })(),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/workout";
+  event.waitUntil(
+    (async () => {
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const c of wins) {
+        if ("focus" in c) {
+          await c.focus();
+          if ("navigate" in c && !c.url.endsWith(url)) c.navigate(url).catch(() => {});
+          return;
+        }
+      }
+      await self.clients.openWindow(url);
     })(),
   );
 });

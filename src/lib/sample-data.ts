@@ -1,5 +1,7 @@
 import { PRESET_PROGRAMS } from "@/data/programs";
-import type { BodyMeasurement, NutritionLog, Workout } from "./types";
+import type { BodyMeasurement, MealRecord, MealType, Workout } from "./types";
+import { FOOD_DATABASE } from "@/data/foods";
+import { itemFromFood } from "./nutrition";
 import { addDays, toDateKey, uuid } from "./utils";
 
 /** Starting working weights (kg) used to generate realistic, progressing history */
@@ -15,7 +17,7 @@ function round(n: number, step = 2.5) {
   return Math.round(n / step) * step;
 }
 
-export function generateSampleData(): { workouts: Workout[]; body: BodyMeasurement[]; nutrition: NutritionLog[] } {
+export function generateSampleData(): { workouts: Workout[]; body: BodyMeasurement[]; meals: MealRecord[] } {
   const ppl = PRESET_PROGRAMS[0];
   const today = new Date();
   const workouts: Workout[] = [];
@@ -78,22 +80,34 @@ export function generateSampleData(): { workouts: Workout[]; body: BodyMeasureme
     });
   }
 
-  const foods: [string, number, number, number, number][] = [
-    ["Oats with whey & banana", 520, 38, 78, 9],
-    ["Chicken, rice & broccoli", 680, 55, 85, 12],
-    ["Greek yogurt & berries", 220, 20, 25, 4],
-    ["Salmon with sweet potato", 640, 42, 55, 26],
-    ["Protein shake", 160, 30, 4, 2],
-    ["Mixed nuts", 180, 6, 6, 16],
-  ];
-  const nutrition: NutritionLog[] = [];
+  const food = (id: string) => FOOD_DATABASE.find((f) => f.id === `food-${id}`)!;
+  const plan: Record<MealType, [string, number][][]> = {
+    breakfast: [
+      [["oats", 80], ["whey-protein", 30], ["banana", 118], ["milk-semi", 200]],
+      [["egg-whole", 150], ["whole-wheat-bread", 70], ["avocado", 75]],
+    ],
+    lunch: [
+      [["chicken-breast-cooked", 180], ["white-rice-cooked", 220], ["broccoli", 120], ["olive-oil", 10]],
+      [["tuna-canned-water", 120], ["pasta-cooked", 220], ["tomato", 120]],
+    ],
+    dinner: [
+      [["salmon-cooked", 150], ["sweet-potato-baked", 220], ["green-beans", 120]],
+      [["beef-mince-5", 150], ["basmati-cooked", 200], ["bell-pepper", 120]],
+    ],
+    snacks: [
+      [["greek-yogurt-0", 170], ["blueberries", 80]],
+      [["almonds", 30], ["apple", 182]],
+    ],
+  };
+  const meals: MealRecord[] = [];
   for (let d = 6; d >= 0; d--) {
     const date = toDateKey(addDays(today, -d));
-    const items = d === 0 ? foods.slice(0, 3) : foods.filter((_, idx) => (idx + d) % 5 !== 0);
-    for (const [name, calories, protein, carbs, fat] of items) {
-      nutrition.push({ id: uuid(), date, name, calories, protein, carbs, fat, updatedAt: new Date().toISOString() });
+    for (const type of ["breakfast", "lunch", "dinner", "snacks"] as MealType[]) {
+      if (d === 0 && (type === "dinner" || type === "snacks")) continue; // today is still in progress
+      const items = plan[type][d % 2].map(([id, g]) => itemFromFood(food(id), g));
+      meals.push({ id: uuid(), date, type, items, updatedAt: new Date().toISOString() });
     }
   }
 
-  return { workouts: workouts.reverse(), body, nutrition };
+  return { workouts: workouts.reverse(), body, meals };
 }

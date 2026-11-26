@@ -1,210 +1,242 @@
-Act as a senior full-stack developer, UI/UX designer, and software architect.
+# GYMTRACK – New Feature Implementation
 
-I want you to build a premium, modern gym and workout tracking application that I can use personally on my iPhone.
+Act as a senior full-stack developer. I already have an existing GYMTRACK application. I want you to extend it with the following features.
 
-I am developing on Windows, so the application must be built using technologies that work on Windows and can be deployed as a Progressive Web App (PWA).
+**IMPORTANT:**
+- Do NOT rebuild the application from scratch.
+- Do NOT remove or break existing functionality.
+- Preserve the existing design, colors, navigation and overall architecture.
+- Integrate all new features into the existing application.
+- Inspect the current project structure and database before making changes.
+- Make all features fully functional, not just visual prototypes.
+- Ensure compatibility with iPhone, Android and desktop browsers.
 
-PROJECT NAME:
-GYMTRACK
+## 1. ADVANCED WORKOUT TRACKING
 
-TECHNOLOGY STACK:
-- Next.js (App Router)
-- TypeScript
-- Tailwind CSS
-- Supabase for database and authentication
-- Recharts for statistics and charts
-- Lucide React for icons
-- PWA functionality for iPhone installation
+Extend the existing workout tracker to support different training techniques.
 
-DESIGN DIRECTION:
+### Normal sets
+- Allow users to add, edit and delete sets.
+- Record weight, repetitions and completed status.
+- Allow individual rest durations.
 
-Create a premium fitness application inspired by Hevy, Strong, and Apple Fitness.
+### Supersets
+- Allow users to group two or more exercises into a superset.
+- Display grouped exercises clearly.
+- Allow users to complete exercises consecutively.
+- Start the rest timer after completing the entire superset.
+- Allow users to edit or remove exercises from a superset.
 
-Design requirements:
-- Dark theme by default.
-- Premium, minimalist interface.
-- Black and dark grey backgrounds.
-- White typography.
-- Vibrant lime green accent color.
-- Smooth animations and transitions.
-- Rounded cards and modern components.
-- Excellent mobile-first responsive design.
-- Optimized specifically for iPhone screens.
-- Bottom navigation similar to a native mobile application.
+### Dropsets
+- Allow users to create dropsets within an exercise.
+- Record multiple weight reductions and repetitions.
+- Example: 20 kg × 10 reps, 15 kg × 8 reps, 10 kg × 8 reps.
+- Group all dropset stages visually.
+- Do not treat each stage as an independent exercise.
 
-APPLICATION FEATURES:
+### Additional training techniques
+Support:
+- Giant sets.
+- Rest-pause sets.
+- Myo-reps.
+- Tempo training.
 
-1. DASHBOARD
-- Welcome screen.
-- Today's workout.
-- Weekly workout statistics.
-- Total workouts completed.
-- Current body weight.
-- Personal records.
-- Weekly activity chart.
-- Quick start workout button.
+Allow users to select the training technique when creating or editing exercises.
 
-2. WORKOUT TRACKER
-- Start a new workout.
-- Select exercises.
-- Add multiple sets.
-- Record weight and repetitions.
-- Track rest periods.
-- Start and stop a rest timer.
-- Edit and delete sets.
-- Finish and save workouts.
-- Display workout duration.
-- Automatically save workout progress.
+## 2. ADVANCED REST TIMER
 
-3. WORKOUT PROGRAMS
-Create predefined workout routines:
-- Push / Pull / Legs.
-- Upper / Lower.
-- Full Body.
-- Arnold Split.
+Improve the existing rest timer.
+
+Requirements:
+- Configurable rest duration.
+- Circular countdown interface.
+- Start, pause, resume and reset.
+- Sound alarm when the timer reaches zero.
+- Vibration when supported by the device.
+- Browser notification when permission is granted.
+- Option to select different alarm sounds.
+- Option to enable or disable sound and vibration.
+- Automatically start the timer after completing a set.
+- Allow users to skip rest.
+- Allow users to add or subtract 15 seconds.
+
+IMPORTANT:
+The timer must be designed for PWA compatibility on iOS and Android.
+
+Test background and locked-screen behavior. Do not assume JavaScript timers or custom audio will continue running when iOS suspends the application.
+
+Use Web Push notifications as a fallback where appropriate, but do not promise that push notifications can play a custom ringtone.
+
+## 3. PERSONALIZED NUTRITION TRACKER
+
+Create a comprehensive food and nutrition module.
+
+### Food database
+Allow users to:
+- Search for foods by name.
+- Browse food categories.
+- Select foods from a large database.
+- Add custom foods manually.
+- Save favorite foods.
+- Save frequently used meals.
+
+Integrate Open Food Facts or another suitable nutrition database API.
+
+### Food quantities
+When selecting a food, allow the user to enter the quantity in grams.
+
+Automatically calculate:
+- Calories.
+- Protein.
+- Carbohydrates.
+- Fat.
+
+Use the nutritional values per 100 grams to calculate the actual nutritional values for the selected quantity.
+
+### Meals
+Create categories:
+- Breakfast.
+- Lunch.
+- Dinner.
+- Snacks.
 
 Allow users to:
-- Create custom workout plans.
-- Edit routines.
-- Add and remove exercises.
-- Schedule workouts by day.
-- Track completed sessions.
+- Add multiple foods to each meal.
+- Edit quantities.
+- Remove foods.
+- Duplicate previous meals.
+- Save custom meals.
+- Review previous days.
 
-4. EXERCISE LIBRARY
-Create an exercise database containing:
-- Exercise name.
-- Muscle group.
-- Equipment required.
-- Exercise description.
-- Instructions.
-- Sets and repetitions recommendations.
+### Daily nutrition dashboard
+Display:
+- Total calories consumed.
+- Protein consumed.
+- Carbohydrates consumed.
+- Fat consumed.
+- Daily targets.
+- Remaining calories and macros.
 
-Include categories:
+Allow users to customize their daily nutritional targets.
+
+## 4. EXPANDED EXERCISE LIBRARY
+
+Improve the existing exercise database.
+
+Include:
 - Chest.
 - Back.
 - Shoulders.
 - Biceps.
 - Triceps.
-- Legs.
+- Quadriceps.
+- Hamstrings.
 - Glutes.
+- Calves.
 - Abs.
+- Forearms.
 - Cardio.
 
-Add search and filtering functionality.
+Each exercise should have:
+- Name.
+- Primary muscle group.
+- Secondary muscles.
+- Equipment.
+- Instructions.
+- Images or illustrations where available.
+- Difficulty level.
+- Exercise category.
 
-5. PROGRESS TRACKING
-Track:
-- Body weight.
-- Strength progression.
-- Personal records.
-- Training frequency.
-- Total volume lifted.
+Add filters for:
+- Muscle group.
+- Equipment.
+- Exercise type.
+- Difficulty.
 
-Create beautiful interactive charts showing progress over time.
+### Custom exercises
+Allow users to:
+- Create their own exercises.
+- Upload an exercise image.
+- Specify the targeted muscles.
+- Select equipment.
+- Edit or delete custom exercises.
 
-6. BODY TRACKING
-Allow users to record:
-- Body weight.
-- Body fat percentage.
-- Chest measurement.
-- Waist measurement.
-- Arm measurement.
-- Thigh measurement.
+Do not create duplicate exercises when a custom exercise already exists.
 
-Display historical progress.
+## 5. DATABASE AND DATA INTEGRITY
 
-7. WORKOUT HISTORY
-- List previous workouts.
-- Display exercises performed.
-- Show weights and repetitions.
-- Show workout duration.
-- Allow users to review previous sessions.
+Inspect the existing database schema before modifying it.
 
-8. PROFILE AND SETTINGS
-- User profile.
-- Personal fitness goals.
-- Preferred units (kg/lbs).
-- Theme settings.
-- Account settings.
+Implement the necessary database changes for:
+- Superset grouping.
+- Dropset stages.
+- Training techniques.
+- Rest timer preferences.
+- Food database.
+- Custom foods.
+- Meal records.
+- Meal items.
+- Nutritional targets.
+- Custom exercises.
 
-9. NUTRITION DASHBOARD
-Create a simple nutrition tracker:
-- Daily calories.
-- Protein.
-- Carbohydrates.
-- Fat.
-- Daily nutrition goals.
+Preserve existing workout history.
 
-10. PWA AND IPHONE EXPERIENCE
-This is extremely important.
+Use appropriate database relationships and migrations.
 
-Make the application installable on iPhone through Safari's Add to Home Screen functionality.
+If Supabase is used:
+- Implement Row Level Security.
+- Ensure users can only access their own private data.
+- Avoid exposing service-role credentials in frontend code.
+
+## 6. MOBILE AND PWA EXPERIENCE
+
+Ensure all new features work on:
+- iPhone.
+- Android.
+- Desktop.
 
 Requirements:
-- Web app manifest.
-- Service worker.
-- App icons.
-- Standalone display mode.
-- Mobile-safe navigation.
-- Responsive layouts.
-- Offline support for essential workout tracking.
-- Local data persistence when offline.
-- Synchronization when internet connection returns.
+- Responsive mobile-first design.
+- Touch-friendly controls.
+- Smooth navigation.
+- Proper loading states.
+- Offline support for workout recording.
+- Local persistence of unfinished workouts.
+- Synchronization when internet connectivity returns.
 
-DATABASE:
+## 7. DEVELOPMENT AND TESTING
 
-Design a proper Supabase database with tables for:
-- profiles
-- exercises
-- workout_programs
-- workouts
-- workout_exercises
-- workout_sets
-- body_measurements
-- nutrition_logs
-- personal_records
+Work in phases.
 
-Implement appropriate relationships, user authentication, and Row Level Security policies.
+Before implementation:
+1. Inspect the existing project.
+2. Understand the current architecture.
+3. Identify reusable components.
+4. Review the database.
+5. Explain the planned changes.
 
-DEVELOPMENT INSTRUCTIONS:
-
-1. First, inspect the current project directory.
-2. Set up the complete application structure.
-3. Build the user interface.
-4. Implement the database schema.
-5. Implement authentication.
-6. Implement all core functionality.
-7. Implement PWA support.
-8. Test the application and fix errors.
-9. Make sure all buttons and navigation work.
-10. Make sure the application works correctly on mobile devices.
-
-IMPORTANT:
-- Do not create just a static design or prototype.
-- Build a functional application.
-- Do not leave buttons without functionality.
-- Use reusable components.
+During implementation:
+- Reuse existing components whenever possible.
+- Maintain the existing visual identity.
 - Write clean, maintainable code.
-- Handle loading states and errors.
-- Include realistic sample exercises and workout data.
-- Make the application easy to extend in the future.
+- Avoid unnecessary dependencies.
+- Handle errors properly.
+- Keep existing functionality working.
 
-WORKING METHOD:
+After implementation:
+- Test normal sets.
+- Test supersets.
+- Test dropsets.
+- Test rest timer behavior.
+- Test food calculations.
+- Test custom foods.
+- Test custom exercises.
+- Test mobile layouts.
+- Test offline workout persistence.
+- Fix errors and regressions.
 
-Work in small, logical phases.
+**FINAL OBJECTIVE:**
 
-Start by creating the project structure and implementing the complete dashboard and navigation.
+Transform the existing GYMTRACK application into an advanced personal fitness platform with professional workout tracking, advanced training techniques, a powerful nutrition tracker and a comprehensive exercise library.
 
-Then continue with the workout tracker, exercise library, workout programs, progress tracking, database, authentication, and PWA functionality.
-
-Do not stop after generating a plan. Start implementing the actual application.
-
-If external credentials are required, create an example environment file and explain exactly how I should configure them.
-
-At the end of each development phase:
-- Check for errors.
-- Run the application.
-- Verify the implemented functionality.
-- Explain what has been completed.
-
-The final goal is a beautiful, fully functional personal gym application that I can use daily on my iPhone.
+Do not stop at planning. Implement the features in the existing codebase and verify that they work.

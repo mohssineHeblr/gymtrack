@@ -78,7 +78,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         s.workouts !== prev.workouts ||
         s.programs !== prev.programs ||
         s.body !== prev.body ||
-        s.nutrition !== prev.nutrition ||
+        s.meals !== prev.meals ||
+        s.foods !== prev.foods ||
+        s.savedMeals !== prev.savedMeals ||
         s.profile !== prev.profile ||
         s.customExercises !== prev.customExercises;
       if (changed) schedule();

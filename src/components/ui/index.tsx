@@ -14,15 +14,18 @@ export function Card({
   children,
   onClick,
   as = "div",
+  id,
 }: {
   className?: string;
   children: ReactNode;
   onClick?: () => void;
   as?: "div" | "button";
+  id?: string;
 }) {
   const Comp = onClick ? "button" : as;
   return (
     <Comp
+      id={id}
       onClick={onClick}
       className={cn(
         "block w-full rounded-3xl border border-line bg-surface p-4 text-left",

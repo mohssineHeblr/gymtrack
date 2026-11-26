@@ -4,17 +4,29 @@ import { useMemo, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { Button, Chip, Input, Sheet } from "./ui";
 import { useExercises } from "@/lib/store";
-import { MUSCLE_GROUPS, type Exercise, type MuscleGroup } from "@/lib/types";
+import { ExerciseThumb } from "./ExerciseThumb";
+import { MUSCLE_GROUPS, type Difficulty, type Exercise, type ExerciseType, type MuscleGroup } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function filterExercises(list: Exercise[], query: string, group: MuscleGroup | "All", equipment?: string) {
-  const q = query.trim().toLowerCase();
-  return list.filter(
-    (e) =>
-      (group === "All" || e.muscleGroup === group) &&
-      (!equipment || equipment === "All" || e.equipment === equipment) &&
-      (!q || e.name.toLowerCase().includes(q) || e.muscleGroup.toLowerCase().includes(q) || e.equipment.toLowerCase().includes(q)),
-  );
+export interface ExerciseFilters {
+  group: MuscleGroup | "All";
+  equipment: string;
+  type: ExerciseType | "All";
+  difficulty: Difficulty | "All";
+}
+
+export function filterExercises(list: Exercise[], query: string, filters: Partial<ExerciseFilters> | MuscleGroup | "All") {
+  const f: Partial<ExerciseFilters> = typeof filters === "string" ? { group: filters } : filters;
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return list.filter((e) => {
+    if (f.group && f.group !== "All" && e.muscleGroup !== f.group) return false;
+    if (f.equipment && f.equipment !== "All" && e.equipment !== f.equipment) return false;
+    if (f.type && f.type !== "All" && e.type !== f.type) return false;
+    if (f.difficulty && f.difficulty !== "All" && e.difficulty !== f.difficulty) return false;
+    if (!words.length) return true;
+    const hay = [e.name, e.muscleGroup, e.equipment, ...(e.primaryMuscles ?? []), ...(e.secondaryMuscles ?? [])].join(" ").toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
 }
 
 export function ExercisePicker({
@@ -92,14 +104,13 @@ export function ExercisePicker({
           return (
             <li key={e.id}>
               <button onClick={() => toggle(e.id)} className="tap flex w-full items-center gap-3 py-3 text-left">
-                <div
-                  className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-xs font-bold",
-                    isSel ? "bg-accent text-accent-ink" : "bg-surface-2 text-muted",
-                  )}
-                >
-                  {isSel ? <Check className="h-5 w-5" /> : e.name.slice(0, 2).toUpperCase()}
-                </div>
+                {isSel ? (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-ink">
+                    <Check className="h-5 w-5" />
+                  </div>
+                ) : (
+                  <ExerciseThumb exercise={e} />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold">{e.name}</div>
                   <div className="text-xs text-muted">

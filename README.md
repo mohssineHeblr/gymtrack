@@ -15,13 +15,15 @@ A premium, mobile-first gym and workout tracker. It's built as a Progressive Web
 | **Muscle recovery** | Front/back body heat map with 18 muscles, recovery %, time until recovered, and weekly sets per muscle versus the 10–20 set guideline |
 | **Exercise preferences** | Mark exercises "Suggest more" (favourite) or "Don't suggest" (excluded). Each exercise shows a body map of its primary and secondary muscles |
 | **Dashboard** | See today's scheduled workout, start a workout in one tap, check weekly goal progress and streak, weekly volume and time, total workouts, current body weight, recent PRs, and a weekly activity chart |
-| **Workout tracker** | Start an empty workout, a program day, or a repeat of a past workout. Add exercises, add, edit and delete sets, set types (warm-up, drop, failure), see "previous" values, use an automatic rest timer (±15 s, stop), watch a live duration counter, write notes. Progress saves automatically, even after a reload or offline |
+| **Workout tracker** | Start an empty workout, a program day, or a repeat of a past workout. Add, edit and delete sets, set types (working, warm-up, drop, to failure), **individual rest per set**, "previous" values, live duration, notes. Progress saves automatically, even after a reload or offline |
+| **Training techniques** | **Supersets** (2 exercises) and **giant sets** (3+) shown as one block (A1, A2…); you're taken to the next exercise and the rest timer starts only after the whole round. **Dropsets** log every weight drop inside the same set (e.g. 20 kg×10 → 16 kg×8 → 10 kg×8). **Rest-pause** and **myo-reps** log mini-sets with an automatic short pause. **Tempo** prescriptions (e.g. 3-1-1-0). Choose the technique per exercise in a workout or in a program |
+| **Rest timer** | Circular countdown with start, pause, resume, reset, skip and ±15 s, configurable durations, auto-start after a set, 5 alarm sounds with volume and preview, vibration and notification toggles. Based on the clock, so it stays correct when the app is suspended. Optional Web Push fallback for a locked phone |
 | **Programs** | Templates for Push/Pull/Legs, Upper/Lower, Full Body and Arnold Split. Create, duplicate, edit and delete programs, add, remove and reorder exercises, set sets, reps and rest, schedule each day by weekday, track completed sessions |
-| **Exercise library** | 70 exercises across Chest, Back, Shoulders, Biceps, Triceps, Legs, Glutes, Abs and Cardio, each with a description, instructions and recommended sets and reps. Search, filter by muscle and equipment, add custom exercises |
+| **Exercise library** | 118 exercises across Chest, Back, Shoulders, Biceps, Triceps, Forearms, Quadriceps, Hamstrings, Glutes, Calves, Abs and Cardio. Each has primary and secondary muscles (body-map illustration), equipment, type, difficulty and instructions. Filter by muscle group, equipment, type and difficulty. Custom exercises with your own image, targeted muscles and equipment, which you can edit and delete. Duplicate names are blocked |
 | **Progress** | Training frequency, weekly volume, estimated 1RM and top-weight progress per exercise, all personal records, body-weight trend |
 | **Body** | Log weight, body fat %, chest, waist, arm and thigh, see the change since your last entry, view a chart per metric, edit and delete entries |
 | **History** | Workouts grouped by month and searchable. Each one shows duration, volume, sets, PRs and every set. You can edit the name and notes, repeat the workout or delete it |
-| **Nutrition** | Daily calories and macros with a ring and progress bars, quick-add foods, step back through past days, a 7-day calorie chart, editable goals |
+| **Nutrition** | Breakfast, lunch, dinner and snacks with several foods each. Search a built-in database of 146 foods (values per 100 g) by name or category, or millions of branded products through **Open Food Facts**. Enter grams and calories and macros are calculated automatically. Custom foods, favourites, frequent foods, saved meals, copy a previous meal, edit quantities, review past days. A daily dashboard shows consumed versus targets and the calories and macros remaining. Targets are customisable |
 | **Profile** | Name, goal, target weight, weekly target, kg or lbs, dark, light or system theme, account and sync, export and import a JSON backup, sample data, reset |
 | **PWA** | Manifest, iOS icons, standalone mode, safe-area aware layout, a service worker that caches every page for offline use, local data storage, sync when you're back online |
 
@@ -53,7 +55,7 @@ Other scripts: `npm run typecheck`, `npm run icons` (rebuilds the app icons), `n
 Without this step the app runs in **local mode**, and everything still works.
 
 1. Create a free project at <https://supabase.com>.
-2. In the Supabase dashboard, open **SQL Editor → New query**. Paste the whole of [`supabase/schema.sql`](supabase/schema.sql) and click **Run**. This creates all 9 tables, the relationships, the Row Level Security policies, a trigger that creates your profile when you sign up, and the 70 built-in exercises.
+2. In the Supabase dashboard, open **SQL Editor → New query**. Paste the whole of [`supabase/schema.sql`](supabase/schema.sql) and click **Run**. This creates all tables, the relationships, the Row Level Security policies, a trigger that creates your profile when you sign up, the 118 built-in exercises and the 146 built-in foods. **Upgrading an existing v1 database?** Run the same file again. It is idempotent: it adds the new columns and tables, re-categorises old "Legs" exercises, and copies old `nutrition_logs` into meals. Your workout history is kept.
 3. Go to **Project Settings → API**. Copy the **Project URL** and the **anon public** key.
 4. Copy `.env.example` to `.env.local` and fill in the two values:
    ```
@@ -65,7 +67,21 @@ Without this step the app runs in **local mode**, and everything still works.
 
 When you deploy (step 3), add the same two variables in your hosting provider's settings.
 
-**Database tables:** `profiles`, `exercises`, `workout_programs`, `workouts` → `workout_exercises` → `workout_sets`, `body_measurements`, `nutrition_logs`, `personal_records`. Row Level Security is on for every table: each user can only read and write their own rows. Built-in exercises can be read by everyone.
+**Database tables:** `profiles` (including `timer_settings`), `exercises`, `workout_programs`, `workouts` → `workout_exercises` (`group_id` for supersets, `technique`, `tempo`) → `workout_sets` (`rest_seconds`) → `workout_set_stages` (drops and mini-sets), `body_measurements`, `foods`, `meals` → `meal_items`, `saved_meals`, `personal_records`, `rest_timer_pushes`, plus the legacy `nutrition_logs`. Migrations live in `supabase/migrations/`, and `npm run seed:sql` rebuilds `schema.sql`. Row Level Security is on for every table: each user can only read and write their own rows. Built-in exercises can be read by everyone.
+
+### (Optional) Locked-screen rest alerts with Web Push
+
+Phones pause web apps in the background. While GYMTRACK is closed or the screen is locked, it can't play its own alarm or vibrate. The timer itself stays correct because it is based on the clock. To still get an alert on a locked phone:
+
+1. Run `npm run vapid`. Put `NEXT_PUBLIC_VAPID_PUBLIC_KEY` in `.env.local` and in Vercel.
+2. Deploy the Edge Function and set its secrets:
+   ```
+   npx supabase functions deploy rest-timer-push
+   npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com
+   ```
+3. On the iPhone, the app must be **installed to the Home Screen** (iOS 16.4 or later). Sign in, then turn on **Profile → Rest timer → Locked-screen push**.
+
+When the app goes to the background with a rest timer running, it asks the function to send a push at the end time. If you reopen the app first, the push is cancelled. Pushes use the **system notification sound**, so a custom ringtone isn't possible.
 
 ---
 
