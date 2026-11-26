@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { Trophy } from "lucide-react";
+import { Ban, Heart, Trophy } from "lucide-react";
+import { BodyMap } from "./BodyMap";
+import { MUSCLE_INFO, musclesFor } from "@/data/muscles";
+import { cn } from "@/lib/utils";
 import { Badge, Button, Sheet } from "./ui";
 import { TrendChart } from "./charts";
 import { useExerciseMap, useGym } from "@/lib/store";
@@ -23,6 +26,17 @@ export function ExerciseDetail({
   const workouts = useGym((s) => s.workouts);
   const units = useGym((s) => s.profile.units);
   const ex = exerciseId ? exMap.get(exerciseId) : undefined;
+  const favorite = useGym((s) => !!exerciseId && s.profile.favoriteExercises.includes(exerciseId));
+  const excluded = useGym((s) => !!exerciseId && s.profile.excludedExercises.includes(exerciseId));
+  const toggleFavorite = useGym((s) => s.toggleFavorite);
+  const toggleExcluded = useGym((s) => s.toggleExcluded);
+  const targets = ex ? musclesFor(ex) : null;
+  const muscleColors = targets
+    ? {
+        ...Object.fromEntries(targets.secondary.map((m) => [m, "color-mix(in srgb, var(--accent) 40%, var(--surface-3))"])),
+        ...Object.fromEntries(targets.primary.map((m) => [m, "var(--accent)"])),
+      }
+    : {};
 
   const progression = useMemo(
     () => (exerciseId ? exerciseProgression(workouts, exerciseId).map((p) => ({ ...p, e1rm: kgToDisplay(p.e1rm, units) ?? 0 })) : []),
@@ -40,6 +54,42 @@ export function ExerciseDetail({
             {ex.isCustom && <Badge className="bg-surface-3 text-muted">Custom</Badge>}
           </div>
           <p className="text-[15px] leading-relaxed text-fg/90">{ex.description}</p>
+
+          {targets && targets.primary.length > 0 && (
+            <div className="flex items-center gap-3 rounded-2xl bg-surface-2 p-3">
+              <BodyMap colors={muscleColors} size="sm" className="h-32 w-24 shrink-0" />
+              <div className="min-w-0 flex-1 space-y-2 text-sm">
+                <div>
+                  <div className="text-xs text-muted">Primary</div>
+                  <div className="font-semibold text-accent">{targets.primary.map((m) => MUSCLE_INFO[m].label).join(", ")}</div>
+                </div>
+                {targets.secondary.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted">Secondary</div>
+                    <div className="font-medium">{targets.secondary.map((m) => MUSCLE_INFO[m].label).join(", ")}</div>
+                  </div>
+                )}
+                <div className="text-xs text-muted">{targets.compound ? "Compound movement" : "Isolation movement"}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => toggleFavorite(ex.id)}
+              aria-pressed={favorite}
+              className={cn("tap flex items-center justify-center gap-1.5 rounded-2xl py-2.5 text-sm font-semibold", favorite ? "bg-accent text-accent-ink" : "bg-surface-2")}
+            >
+              <Heart className="h-4 w-4" fill={favorite ? "currentColor" : "none"} /> {favorite ? "Favourite" : "Suggest more"}
+            </button>
+            <button
+              onClick={() => toggleExcluded(ex.id)}
+              aria-pressed={excluded}
+              className={cn("tap flex items-center justify-center gap-1.5 rounded-2xl py-2.5 text-sm font-semibold", excluded ? "bg-danger text-white" : "bg-surface-2")}
+            >
+              <Ban className="h-4 w-4" /> {excluded ? "Excluded" : "Don't suggest"}
+            </button>
+          </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-2xl bg-surface-2 p-3">

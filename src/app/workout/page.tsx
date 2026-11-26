@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowDown,
+  ArrowDownRight,
   ArrowUp,
+  ArrowUpRight,
+  Repeat,
+  Sparkles,
   Check,
   ChevronRight,
   Info,
@@ -20,6 +24,8 @@ import {
 import { Button, Card, EmptyState, IconButton, NumberCell, SectionTitle, Sheet, TextArea } from "@/components/ui";
 import { ExercisePicker } from "@/components/ExercisePicker";
 import { ExerciseDetail } from "@/components/ExerciseDetail";
+import { SwapSheet } from "@/components/SwapSheet";
+import { SmartWorkoutCard } from "@/components/SmartWorkoutCard";
 import { useExerciseMap, useGym } from "@/lib/store";
 import { useNow } from "@/lib/hooks";
 import { workoutVolume } from "@/lib/stats";
@@ -57,7 +63,9 @@ function StartWorkout() {
         <p className="text-sm text-muted">Pick a routine or start from scratch.</p>
       </div>
 
-      <Button size="lg" className="mt-3 w-full" icon={<Plus className="h-5 w-5" />} onClick={() => startWorkout({ name: "Quick Workout" })}>
+      <SmartWorkoutCard className="mt-3" />
+
+      <Button size="lg" variant="secondary" className="mt-3 w-full" icon={<Plus className="h-5 w-5" />} onClick={() => startWorkout({ name: "Quick Workout" })}>
         Start empty workout
       </Button>
 
@@ -279,6 +287,9 @@ function ExerciseBlock({ we, index, count }: { we: WorkoutExercise; index: numbe
   const removeExercise = useGym((s) => s.removeExerciseFromActive);
   const moveExercise = useGym((s) => s.moveExerciseInActive);
   const setExerciseRest = useGym((s) => s.setExerciseRest);
+  const replaceExercise = useGym((s) => s.replaceExerciseInActive);
+  const activeIds = useGym((s) => s.activeWorkout?.exercises.map((e) => e.exerciseId).join(",") ?? "");
+  const [swap, setSwap] = useState(false);
   const [menu, setMenu] = useState(false);
   const [info, setInfo] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -293,6 +304,10 @@ function ExerciseBlock({ we, index, count }: { we: WorkoutExercise; index: numbe
   }, [workouts, we.exerciseId]);
 
   let workingIndex = 0;
+  let warmIndex = 0;
+  let setNumber = 0;
+  const prevWork = previous?.filter((x) => x.type !== "warmup") ?? [];
+  const prevWarm = previous?.filter((x) => x.type === "warmup") ?? [];
 
   return (
     <Card className="p-0">
@@ -304,7 +319,7 @@ function ExerciseBlock({ we, index, count }: { we: WorkoutExercise; index: numbe
           </div>
           <div className="text-xs text-muted">
             {ex?.muscleGroup} · {ex?.equipment}
-            {ex && ` · target ${ex.recommendedSets}×${ex.recommendedReps}`}
+            {we.targetReps ? ` · target ${we.targetReps} reps` : ex ? ` · target ${ex.recommendedSets}×${ex.recommendedReps}` : ""}
           </div>
         </button>
         <button
@@ -318,6 +333,19 @@ function ExerciseBlock({ we, index, count }: { we: WorkoutExercise; index: numbe
           <MoreHorizontal className="h-4 w-4" />
         </IconButton>
       </div>
+
+      {we.tip && !we.sets.some((x) => x.completed) && (
+        <div className="mx-4 mb-2 flex items-start gap-2 rounded-xl bg-surface-2 px-3 py-2 text-xs text-muted">
+          {we.trend === "up" ? (
+            <ArrowUpRight className="mt-px h-3.5 w-3.5 shrink-0 text-accent" />
+          ) : we.trend === "down" ? (
+            <ArrowDownRight className="mt-px h-3.5 w-3.5 shrink-0 text-warn" />
+          ) : (
+            <Sparkles className="mt-px h-3.5 w-3.5 shrink-0 text-accent" />
+          )}
+          <span>{we.tip}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-[36px_1fr_1fr_1fr_44px] items-center gap-2 px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-subtle">
         <span className="text-center">Set</span>
@@ -334,9 +362,9 @@ function ExerciseBlock({ we, index, count }: { we: WorkoutExercise; index: numbe
       </div>
 
       <div className="space-y-1 px-3 pb-2">
-        {we.sets.map((s, si) => {
-          const label = s.type === "normal" ? String(++workingIndex) : SET_LABEL[s.type];
-          const prev = previous?.[si];
+        {we.sets.map((s) => {
+          const label = s.type === "normal" ? String(++setNumber) : SET_LABEL[s.type];
+          const prev = s.type === "warmup" ? prevWarm[warmIndex++] : prevWork[workingIndex++];
           return (
             <div
               key={s.id}
@@ -437,6 +465,9 @@ function ExerciseBlock({ we, index, count }: { we: WorkoutExercise; index: numbe
           <Button variant="secondary" icon={<ArrowDown className="h-4 w-4" />} disabled={index === count - 1} onClick={() => moveExercise(we.id, 1)}>
             Move down
           </Button>
+          <Button variant="secondary" icon={<Repeat className="h-4 w-4" />} onClick={() => { setMenu(false); setSwap(true); }}>
+            Replace exercise
+          </Button>
           <Button variant="secondary" icon={<Info className="h-4 w-4" />} onClick={() => { setMenu(false); setInfo(true); }}>
             Exercise instructions
           </Button>
@@ -454,6 +485,12 @@ function ExerciseBlock({ we, index, count }: { we: WorkoutExercise; index: numbe
       </Sheet>
 
       <ExerciseDetail exerciseId={info ? we.exerciseId : null} onClose={() => setInfo(false)} />
+      <SwapSheet
+        exerciseId={swap ? we.exerciseId : null}
+        exclude={activeIds.split(",")}
+        onClose={() => setSwap(false)}
+        onPick={(id) => replaceExercise(we.id, id)}
+      />
     </Card>
   );
 }

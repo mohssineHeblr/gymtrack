@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
   { href: "/programs", label: "Programs", icon: CalendarRange, match: (p: string) => p.startsWith("/programs") },
-  { href: "/workout", label: "Workout", icon: Plus, center: true, match: (p: string) => p.startsWith("/workout") },
-  { href: "/progress", label: "Progress", icon: LineChart, match: (p: string) => ["/progress", "/body", "/history"].some((x) => p.startsWith(x)) },
+  { href: "/workout", label: "Workout", icon: Plus, center: true, match: (p: string) => p.startsWith("/workout") || p.startsWith("/smart") },
+  { href: "/progress", label: "Progress", icon: LineChart, match: (p: string) => ["/progress", "/body", "/history", "/recovery"].some((x) => p.startsWith(x)) },
   { href: "/profile", label: "Profile", icon: User, match: (p: string) => ["/profile", "/nutrition", "/exercises", "/login"].some((x) => p.startsWith(x)) },
 ];
 

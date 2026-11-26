@@ -253,7 +253,23 @@ function profileToRow(p: Profile, userId: string) {
     theme: p.theme,
     nutrition_goals: p.nutritionGoals,
     active_program_id: p.activeProgramId,
+    preferences: {
+      equipment: p.equipment,
+      favoriteExercises: p.favoriteExercises,
+      excludedExercises: p.excludedExercises,
+      smart: p.smart,
+    },
     updated_at: p.updatedAt,
+  };
+}
+
+function prefsFromRow(v: unknown, cur: Profile): Pick<Profile, "equipment" | "favoriteExercises" | "excludedExercises" | "smart"> {
+  const p = (v && typeof v === "object" ? v : {}) as Partial<Profile>;
+  return {
+    equipment: Array.isArray(p.equipment) && p.equipment.length ? p.equipment : cur.equipment,
+    favoriteExercises: Array.isArray(p.favoriteExercises) ? p.favoriteExercises : cur.favoriteExercises,
+    excludedExercises: Array.isArray(p.excludedExercises) ? p.excludedExercises : cur.excludedExercises,
+    smart: { ...cur.smart, ...(p.smart ?? {}) },
   };
 }
 
@@ -269,6 +285,7 @@ function rowToProfile(r: Row, cur: Profile): Profile {
     theme: (r.theme as Profile["theme"]) ?? cur.theme,
     nutritionGoals: { ...cur.nutritionGoals, ...((r.nutrition_goals as object) ?? {}) },
     activeProgramId: (r.active_program_id as string) ?? null,
+    ...prefsFromRow(r.preferences, cur),
     updatedAt: iso(r.updated_at),
   };
 }

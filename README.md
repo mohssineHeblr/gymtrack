@@ -10,6 +10,10 @@ A premium, mobile-first gym and workout tracker. It's built as a Progressive Web
 
 | Area | What you can do |
 |---|---|
+| **Smart Workouts** | A workout built for you every day from your **muscle recovery**, goal, available **equipment** (full gym / home / bodyweight / custom) and target length (30–90 min). Focus is automatic (picks the most recovered split) or forced to Push/Pull/Legs/Upper/Lower/Full. Shuffle, swap any exercise for a smart alternative, remove exercises, optional warm-up sets |
+| **Progressive overload** | Every exercise gets suggested weight × reps from your history: hit the top of the rep range on every set and the weight goes up, otherwise beat last time by a rep, or back off after a grind. Tips appear on each exercise |
+| **Muscle recovery** | Front/back body heat map with 18 muscles, recovery %, time until recovered, and weekly sets per muscle versus the 10–20 set guideline |
+| **Exercise preferences** | Mark exercises "Suggest more" (favourite) or "Don't suggest" (excluded). Each exercise shows a body map of its primary and secondary muscles |
 | **Dashboard** | See today's scheduled workout, start a workout in one tap, check weekly goal progress and streak, weekly volume and time, total workouts, current body weight, recent PRs, and a weekly activity chart |
 | **Workout tracker** | Start an empty workout, a program day, or a repeat of a past workout. Add exercises, add, edit and delete sets, set types (warm-up, drop, failure), see "previous" values, use an automatic rest timer (±15 s, stop), watch a live duration counter, write notes. Progress saves automatically, even after a reload or offline |
 | **Programs** | Templates for Push/Pull/Legs, Upper/Lower, Full Body and Arnold Split. Create, duplicate, edit and delete programs, add, remove and reorder exercises, set sets, reps and rest, schedule each day by weekday, track completed sessions |
@@ -114,20 +118,27 @@ src/
   app/                  # routes (all static, so they can be cached offline)
     page.tsx            # Dashboard
     workout/            # Workout tracker
+    smart/              # Smart Workout preview (generated plan)
+    recovery/           # Muscle recovery map
     programs/ (+edit/)  # Programs list and editor (?id=)
     exercises/          # Exercise library
     progress/           # Charts (?tab=overview|strength|records|body)
     body/  history/ (+view/)  nutrition/  profile/  login/
     manifest.ts         # PWA manifest
   components/           # AppShell, BottomNav, RestTimer, ExercisePicker, charts, ui/ kit
-  data/                 # exercise database + program templates
+  data/                 # exercise database, muscle mapping (muscles.ts), program templates
   lib/
     store.ts            # Zustand store (persisted to localStorage) and all actions
     sync.ts             # Supabase push/pull sync engine
     stats.ts            # volume, e1RM, PRs, weekly trends
+    recovery.ts         # muscle fatigue / recovery model
+    generator.ts        # Smart Workout generator + exercise alternatives
+    progression.ts      # progressive-overload suggestions
     supabase.ts auth.ts types.ts utils.ts sample-data.ts
 public/sw.js            # service worker
 supabase/schema.sql     # complete database schema + RLS + seed
 ```
 
-To add exercises, edit `src/data/exercises.ts` (then run `npm run seed:sql`). To add program templates, edit `src/data/programs.ts`.
+To add exercises, edit `src/data/exercises.ts` and give them primary/secondary muscles in `src/data/muscles.ts` (then run `npm run seed:sql`). To add program templates, edit `src/data/programs.ts`.
+
+> **Upgrading an existing Supabase project?** Re-run `supabase/schema.sql`. It is safe to run again and adds the new `profiles.preferences` column, which syncs equipment, favourites and smart-workout settings.

@@ -18,9 +18,13 @@ create table if not exists public.profiles (
   theme             text not null default 'dark' check (theme in ('dark','light','system')),
   nutrition_goals   jsonb not null default '{"calories":2600,"protein":170,"carbs":300,"fat":80}',
   active_program_id text,
+  -- training preferences: equipment, favourite/excluded exercises, smart-workout settings
+  preferences       jsonb not null default '{}',
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
+-- upgrade path for databases created before v1.1
+alter table public.profiles add column if not exists preferences jsonb not null default '{}';
 
 -- Create a profile automatically when a user signs up
 create or replace function public.handle_new_user()

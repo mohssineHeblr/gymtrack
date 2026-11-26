@@ -5,19 +5,24 @@ import Link from "next/link";
 import { BarChart3, Dumbbell, Sparkles, WifiOff } from "lucide-react";
 import { useGym } from "@/lib/store";
 import { generateSampleData } from "@/lib/sample-data";
-import { Button, Field, Input, Segmented } from "./ui";
+import { Button, Chip, Field, Input, Segmented } from "./ui";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import type { Units } from "@/lib/types";
+import type { FitnessGoal, Units } from "@/lib/types";
+import { EQUIPMENT_PRESETS } from "@/lib/generator";
 
 export function Onboarding() {
   const [name, setName] = useState("");
   const [units, setUnits] = useState<Units>("kg");
+  const [goal, setGoal] = useState<FitnessGoal>("build_muscle");
+  const [equipment, setEquipment] = useState(EQUIPMENT_PRESETS[0].id);
+  const updateProfile = useGym((s) => s.updateProfile);
   const completeOnboarding = useGym((s) => s.completeOnboarding);
   const replaceData = useGym((s) => s.replaceData);
 
   const start = (withSample: boolean) => {
     if (withSample) replaceData(generateSampleData());
     completeOnboarding(name.trim() || "Athlete", units);
+    updateProfile({ fitnessGoal: goal, equipment: [...(EQUIPMENT_PRESETS.find((p) => p.id === equipment) ?? EQUIPMENT_PRESETS[0]).equipment] });
   };
 
   return (
@@ -35,8 +40,8 @@ export function Onboarding() {
 
         <div className="mt-6 grid gap-2.5">
           {[
-            { icon: Sparkles, text: "Ready-made PPL, Upper/Lower, Full Body & Arnold programs" },
-            { icon: BarChart3, text: "Strength, volume and body progress charts" },
+            { icon: Sparkles, text: "Smart workouts built from your recovery, goal & equipment" },
+            { icon: BarChart3, text: "Auto progressive overload, programs & progress charts" },
             { icon: WifiOff, text: "Works offline — your data is saved on this device" },
           ].map(({ icon: Icon, text }) => (
             <div key={text} className="flex items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-sm">
@@ -49,6 +54,24 @@ export function Onboarding() {
         <div className="mt-8 space-y-4">
           <Field label="What should we call you?">
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="given-name" />
+          </Field>
+          <Field label="Main goal" group>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ["build_muscle", "Build muscle"],
+                ["strength", "Get stronger"],
+                ["lose_fat", "Lose fat"],
+                ["endurance", "Endurance"],
+                ["maintain", "Stay fit"],
+              ] as [FitnessGoal, string][]).map(([v, l]) => (
+                <Chip key={v} active={goal === v} onClick={() => setGoal(v)}>
+                  {l}
+                </Chip>
+              ))}
+            </div>
+          </Field>
+          <Field label="Where do you train?" group>
+            <Segmented value={equipment} onChange={setEquipment} options={EQUIPMENT_PRESETS.map((p) => ({ value: p.id, label: p.label }))} />
           </Field>
           <Field label="Preferred units" group>
             <Segmented value={units} onChange={setUnits} options={[{ value: "kg", label: "Kilograms (kg)" }, { value: "lbs", label: "Pounds (lbs)" }]} />

@@ -15,8 +15,10 @@ import {
   RefreshCw,
   Ruler,
   Smartphone,
+  Activity,
   Upload,
 } from "lucide-react";
+import { TrainingSettings } from "@/components/TrainingSettings";
 import { Button, Card, Field, Input, PageHeader, SectionTitle, Segmented, Select, TextArea } from "@/components/ui";
 import { useGym } from "@/lib/store";
 import { useAuth, signOut } from "@/lib/auth";
@@ -172,6 +174,13 @@ export default function ProfilePage() {
             className="min-h-20"
           />
         </Field>
+      </Card>
+
+      <SectionTitle action={<Link href="/recovery" className="flex items-center gap-1 text-sm font-semibold text-accent"><Activity className="h-4 w-4" /> Recovery</Link>}>
+        Training & smart workouts
+      </SectionTitle>
+      <Card>
+        <TrainingSettings hideGoal />
       </Card>
 
       <SectionTitle>Preferences</SectionTitle>

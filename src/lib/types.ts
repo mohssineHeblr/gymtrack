@@ -97,6 +97,11 @@ export interface WorkoutExercise {
   exerciseId: string;
   restSeconds: number;
   notes?: string;
+  /** Rep range the set targets were built for (e.g. "8-12"), used for progression */
+  targetReps?: string;
+  /** Coaching tip from the progression engine (local only) */
+  tip?: string;
+  trend?: "up" | "same" | "down" | "new";
   sets: WorkoutSet[];
 }
 
@@ -147,6 +152,16 @@ export type Units = "kg" | "lbs";
 export type Theme = "dark" | "light" | "system";
 export type FitnessGoal = "build_muscle" | "lose_fat" | "strength" | "endurance" | "maintain";
 
+export type SplitFocus = "auto" | "push" | "pull" | "legs" | "upper" | "lower" | "full";
+
+export interface SmartSettings {
+  /** Target workout length in minutes */
+  duration: number;
+  split: SplitFocus;
+  /** Add ramp-up warm-up sets before the first compound lift */
+  warmups: boolean;
+}
+
 export interface Profile {
   name: string;
   fitnessGoal: FitnessGoal;
@@ -157,6 +172,11 @@ export interface Profile {
   theme: Theme;
   nutritionGoals: NutritionGoals;
   activeProgramId: string | null;
+  /** Equipment available at the user's gym */
+  equipment: Equipment[];
+  favoriteExercises: string[];
+  excludedExercises: string[];
+  smart: SmartSettings;
   updatedAt: string;
 }
 

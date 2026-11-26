@@ -24,6 +24,11 @@ import { computePRs, latestMeasurement, thisWeek, weekStreak, weeklyActivity, wo
 import { nextScheduled, todaysDay } from "@/lib/program-utils";
 import { formatCompact, formatDate, formatWeight, greeting, kgToDisplay, relativeDay, toDateKey } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { SmartWorkoutCard } from "@/components/SmartWorkoutCard";
+import { BodyMap } from "@/components/BodyMap";
+import { recoveryColors, useRecovery } from "@/lib/use-recovery";
+import { MUSCLES, MUSCLE_INFO } from "@/data/muscles";
+import { LEVEL_COLOR, recoveryLevel } from "@/lib/recovery";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -38,6 +43,10 @@ export default function Dashboard() {
   const startFromProgramDay = useGym((s) => s.startFromProgramDay);
   const user = useAuth((s) => s.user);
   const exMap = useExerciseMap();
+  const recovery = useRecovery();
+  const overallRecovery = Math.round(MUSCLES.reduce((a, m) => a + recovery[m].recovery, 0) / MUSCLES.length);
+  const freshest = [...MUSCLES].filter((m) => MUSCLE_INFO[m].size === "large").sort((a, b) => recovery[b].recovery - recovery[a].recovery).slice(0, 3);
+  const sorest = [...MUSCLES].sort((a, b) => recovery[a].recovery - recovery[b].recovery).filter((m) => recovery[m].recovery < 70).slice(0, 3);
 
   const program = programs.find((p) => p.id === profile.activeProgramId);
   const today = todaysDay(program);
@@ -146,6 +155,34 @@ export default function Dashboard() {
           {active ? "Go to workout" : "Quick start empty workout"}
         </Button>
       )}
+
+      {!active && (
+        <>
+          <SectionTitle action={<Link href="/smart" className="text-sm font-semibold text-accent">Customize</Link>}>For you</SectionTitle>
+          <SmartWorkoutCard />
+        </>
+      )}
+
+      {/* Recovery */}
+      <SectionTitle action={<Link href="/recovery" className="text-sm font-semibold text-accent">Details</Link>}>Muscle recovery</SectionTitle>
+      <Link href="/recovery" className="tap flex items-center gap-4 rounded-3xl border border-line bg-surface p-4">
+        <BodyMap colors={recoveryColors(recovery)} size="sm" className="h-32 w-28 shrink-0" />
+        <div className="min-w-0 flex-1 text-sm">
+          <div className="text-[13px] font-medium text-muted">Readiness</div>
+          <div className="text-[28px] font-extrabold leading-none" style={{ color: LEVEL_COLOR[recoveryLevel(overallRecovery)] }}>
+            {overallRecovery}%
+          </div>
+          <div className="mt-2 text-xs text-muted">Fresh</div>
+          <div className="truncate font-semibold">{freshest.map((m) => MUSCLE_INFO[m].label).join(", ")}</div>
+          {sorest.length > 0 && (
+            <>
+              <div className="mt-1.5 text-xs text-muted">Recovering</div>
+              <div className="truncate font-semibold text-warn">{sorest.map((m) => `${MUSCLE_INFO[m].label} ${recovery[m].recovery}%`).join(", ")}</div>
+            </>
+          )}
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-subtle" />
+      </Link>
 
       {/* Weekly stats */}
       <SectionTitle>This week</SectionTitle>
