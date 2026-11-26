@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@custom-variant light (&:where(.light, .light *));
+
+:root {
+  --bg: #000000;
+  --surface: #111113;
+  --surface-2: #1a1a1d;
+  --surface-3: #242428;
+  --line: rgba(255, 255, 255, 0.08);
+  --fg: #ffffff;
+  --muted: #8e8e93;
+  --subtle: #5a5a5f;
+  --accent: #c4f82a;
+  --accent-ink: #0b0f00;
+  --accent-soft: rgba(196, 248, 42, 0.12);
+  --danger: #ff453a;
+  --warn: #ffb020;
+  --info: #5ac8fa;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  color-scheme: dark;
+}
+
+.light {
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --surface-2: #f2f2f5;
+  --surface-3: #e5e5ea;
+  --line: rgba(0, 0, 0, 0.08);
+  --fg: #0a0a0a;
+  --muted: #6c6c70;
+  --subtle: #a1a1a6;
+  --accent: #6aa500;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(106, 165, 0, 0.12);
+  --chart-grid: rgba(0, 0, 0, 0.06);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
+  --animate-fade-up: fade-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-sheet-up: sheet-up 0.32s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-pop: pop 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop {
+  0% { transform: scale(0.85); }
+  100% { transform: scale(1); }
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+/* Prevent iOS zoom on focus: inputs must be >= 16px */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+.pt-safe { padding-top: max(env(safe-area-inset-top), 12px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pb-nav { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
+.bottom-nav-offset { bottom: calc(env(safe-area-inset-bottom) + 76px); }
+
+.tap { transition: transform 0.12s ease, opacity 0.12s ease, background-color 0.2s ease; }
+.tap:active { transform: scale(0.97); opacity: 0.85; }
+
+.glass {
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.recharts-wrapper *:focus { outline: none; }
