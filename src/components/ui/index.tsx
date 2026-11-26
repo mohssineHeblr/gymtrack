@@ -153,6 +153,16 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 // ---------------------------------------------------------------------------
 // Sheet (bottom modal)
 // ---------------------------------------------------------------------------
+let openSheets = 0;
+function lockScroll() {
+  openSheets++;
+  document.body.style.overflow = "hidden";
+}
+function unlockScroll() {
+  openSheets = Math.max(0, openSheets - 1);
+  if (openSheets === 0) document.body.style.overflow = "";
+}
+
 export function Sheet({
   open,
   onClose,
@@ -168,17 +178,21 @@ export function Sheet({
   footer?: ReactNode;
   full?: boolean;
 }) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Lock page scroll while any sheet is open. A shared counter (instead of saving/restoring the
+  // previous value) keeps nested sheets from leaving the page stuck at overflow:hidden.
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    lockScroll();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCloseRef.current();
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      unlockScroll();
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open || typeof document === "undefined") return null;
   return createPortal(
